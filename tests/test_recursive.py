@@ -434,6 +434,87 @@ class TestRecursiveTransformDepthAndBeam:
         assert contexts[0][1] == []
 
 
+class TestRecursiveInfinigramRobustness:
+    """Test robustness and error handling."""
+
+    def test_empty_corpus_initialization(self):
+        """
+        Given: Empty corpus
+        When: Initializing RecursiveInfinigram
+        Then: Initializes without crashing (may have no predictions)
+        """
+        corpus = b""
+
+        # Should not crash
+        model = RecursiveInfinigram(corpus)
+
+        assert model.corpus == corpus
+        assert model.model is not None
+
+    def test_empty_context_prediction(self):
+        """
+        Given: Empty context
+        When: Making prediction
+        Then: Returns empty dict (no context to match)
+        """
+        corpus = b"the cat sat on the mat"
+        model = RecursiveInfinigram(corpus)
+
+        context = b""
+
+        probs = model.predict(context, max_depth=1)
+
+        # Should return dict (possibly empty)
+        assert isinstance(probs, dict)
+
+    def test_context_longer_than_corpus(self):
+        """
+        Given: Context longer than entire corpus
+        When: Making prediction
+        Then: Handles gracefully (no match expected)
+        """
+        corpus = b"cat"
+        model = RecursiveInfinigram(corpus)
+
+        context = b"the quick brown fox jumps over the lazy dog"
+
+        probs = model.predict(context, max_depth=1)
+
+        # Should return dict (likely empty)
+        assert isinstance(probs, dict)
+
+    def test_unicode_handling_in_corpus(self):
+        """
+        Given: Corpus with UTF-8 characters
+        When: Making predictions
+        Then: Handles unicode correctly
+        """
+        corpus = "the café is open".encode('utf-8')
+        model = RecursiveInfinigram(corpus)
+
+        context = "the café".encode('utf-8')
+
+        probs = model.predict(context, max_depth=1)
+
+        assert isinstance(probs, dict)
+
+    def test_very_deep_recursion_does_not_crash(self):
+        """
+        Given: Very deep max_depth
+        When: Making prediction
+        Then: Does not cause stack overflow
+        """
+        corpus = b"the cat sat on the mat"
+        model = RecursiveInfinigram(corpus)
+
+        context = b"The Cat"
+
+        # Very deep recursion (should be stopped by max_depth)
+        probs = model.predict(context, max_depth=10, beam_width=2)
+
+        assert isinstance(probs, dict)
+
+
 class TestIntegration:
     """Integration tests with realistic examples."""
 
