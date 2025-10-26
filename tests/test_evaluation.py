@@ -358,5 +358,93 @@ class TestPrintComparisonTable:
         print_comparison_table(results)
 
 
+class TestEvaluatorEdgeCases:
+    """Test evaluator edge cases for full coverage."""
+
+    def test_evaluate_with_verbose_output(self):
+        """
+        Given: Test data with multiple samples
+        When: Evaluating with verbose=True
+        Then: Prints progress messages (covers logging lines)
+        """
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+        evaluator = Evaluator(model, "Test")
+
+        # Create 100 samples to trigger progress printing
+        test_data = [(b"the", b" ")] * 100
+
+        # Should print progress without crashing
+        metrics, results = evaluator.evaluate(test_data, top_k=5, verbose=True)
+
+        assert len(results) == 100
+        assert isinstance(metrics, EvaluationMetrics)
+
+    def test_evaluate_with_no_predictions(self):
+        """
+        Given: Model that never returns predictions
+        When: Evaluating
+        Then: Handles gracefully with inf perplexity
+        """
+        # Mock model that always returns empty dict
+        class NoOpModel:
+            def predict(self, context, top_k=10):
+                return {}
+
+        model = NoOpModel()
+        evaluator = Evaluator(model, "NoOp")
+
+        test_data = [(b"test", b"x"), (b"data", b"y")]
+
+        metrics, results = evaluator.evaluate(test_data, top_k=5)
+
+        # Coverage should be 0%
+        assert metrics.coverage == 0.0
+
+        # Perplexity should be infinity (no predictions)
+        assert metrics.perplexity == float('inf')
+
+        # Mean probability should be 0
+        assert metrics.mean_probability == 0.0
+
+        # All predictions should be None
+        assert all(r.predicted is None for r in results)
+
+
+class TestBenchmarkSuiteVerbose:
+    """Test benchmark suite with verbose output."""
+
+    def test_compare_models_with_verbose(self):
+        """
+        Given: Multiple models and datasets
+        When: Comparing with verbose=True
+        Then: Prints comparison info (covers logging lines)
+        """
+        corpus = b"the cat sat on the mat"
+
+        models = {
+            "Vanilla": Infinigram(corpus),
+            "Recursive": RecursiveInfinigram(corpus),
+        }
+
+        suite = BenchmarkSuite(corpus)
+        test_data = suite.create_in_distribution_test(10, 5)
+
+        test_datasets = {
+            "Test": test_data,
+        }
+
+        # Should print verbose output
+        results = suite.compare_models(
+            models=models,
+            test_datasets=test_datasets,
+            top_k=5,
+            verbose=True  # Enable verbose logging
+        )
+
+        assert "Vanilla" in results
+        assert "Recursive" in results
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
