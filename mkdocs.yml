@@ -1,0 +1,81 @@
+site_name: Infinigram Documentation
+site_description: High-speed, corpus-based language model with variable-length n-gram matching
+site_author: Alex Towell
+repo_url: https://github.com/queelius/infinigram
+repo_name: queelius/infinigram
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Architecture: ARCHITECTURE.md
+
+  - User Guides:
+    - Loading Datasets: guides/LOADING_DATASETS.md
+    - Benchmarks & Performance: guides/BENCHMARKS.md
+
+  - Features:
+    - Transformation Scoring: features/SCORING_AND_EVALUATION.md
+    - WordNet Integration: features/WORDNET_INTEGRATION.md
+    - Corpus-Guided Transformations: features/CORPUS_GUIDED_TRANSFORMATIONS.md
+
+  - Development:
+    - Test Strategy: development/TEST_STRATEGY_REVIEW.md
+    - Test Summary: development/TEST_REVIEW_SUMMARY.md
+    - Priority Tests: development/PRIORITY_TESTS_TO_ADD.md
+    - REPL Guide: REPL_GUIDE.md
+    - REST API: REST_API.md
+    - Phase 1 Plan: PHASE1_PLAN.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/queelius/infinigram
