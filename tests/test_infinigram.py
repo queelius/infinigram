@@ -5,14 +5,8 @@ Tests for Infinigram variable-length n-gram model.
 
 import pytest
 import numpy as np
-import sys
-from pathlib import Path
 
-# Add langcalc to path
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
-
-from langcalc.infinigram import Infinigram, SuffixArray, create_infinigram
+from infinigram import Infinigram, SuffixArray, create_infinigram
 
 
 class TestSuffixArray:
@@ -23,8 +17,8 @@ class TestSuffixArray:
         corpus = [1, 2, 3, 1, 2, 4]
         sa = SuffixArray(corpus)
 
-        assert len(sa.sa) == len(corpus)
-        assert all(0 <= idx < len(corpus) for idx in sa.sa)
+        assert len(sa.suffix_array) == len(corpus)
+        assert all(0 <= idx < len(corpus) for idx in sa.suffix_array)
 
     def test_find_range_exact_match(self):
         """Test finding exact pattern matches."""
@@ -32,33 +26,32 @@ class TestSuffixArray:
         sa = SuffixArray(corpus)
 
         # Pattern [1, 2] appears at positions 0, 3, 7
-        start, end = sa.find_range([1, 2])
-        assert end > start
-        assert end - start == 3  # Three occurrences
+        positions = sa.search([1, 2])
+        assert len(positions) == 3  # Three occurrences
 
     def test_find_range_not_found(self):
         """Test pattern not in corpus."""
         corpus = [1, 2, 3, 4, 5]
         sa = SuffixArray(corpus)
 
-        start, end = sa.find_range([9, 9, 9])
-        assert start == 0 and end == 0  # Not found
+        positions = sa.search([9, 9, 9])
+        assert len(positions) == 0  # Not found
 
     def test_find_range_single_token(self):
         """Test single token pattern."""
         corpus = [1, 2, 1, 3, 1]
         sa = SuffixArray(corpus)
 
-        start, end = sa.find_range([1])
-        assert end - start == 3  # Token 1 appears 3 times
+        positions = sa.search([1])
+        assert len(positions) == 3  # Token 1 appears 3 times
 
     def test_find_range_empty_pattern(self):
         """Test empty pattern returns empty range."""
         corpus = [1, 2, 3]
         sa = SuffixArray(corpus)
 
-        start, end = sa.find_range([])
-        assert start == 0 and end == 0
+        positions = sa.search([])
+        assert len(positions) == 0
 
 
 class TestInfinigramCore:
@@ -70,8 +63,8 @@ class TestInfinigramCore:
         model = Infinigram(corpus)
 
         assert model.n == 5
-        assert model.vocab_size == 5
-        assert model.vocab == {1, 2, 3, 4, 5}
+        assert model.vocab_size == 256  # Fixed vocabulary for bytes
+        assert model.vocab == set(range(256))  # All 256 possible bytes
 
     def test_infinigram_with_max_length(self):
         """Test max_length parameter."""
@@ -87,6 +80,39 @@ class TestInfinigramCore:
 
         assert isinstance(model, Infinigram)
         assert model.max_length == 5
+
+    def test_byte_validation(self):
+        """Test corpus must be valid bytes (0-255)."""
+        # Valid corpus should work
+        corpus_valid = [0, 128, 255]  # Min, mid, max bytes
+        model = Infinigram(corpus_valid)
+        assert model.n == 3
+
+        # Invalid corpus should raise error
+        with pytest.raises(ValueError, match="Corpus must contain only bytes"):
+            Infinigram([256])  # Too large
+
+        with pytest.raises(ValueError, match="Corpus must contain only bytes"):
+            Infinigram([-1])  # Negative
+
+        with pytest.raises(ValueError, match="Corpus must contain only bytes"):
+            Infinigram([0, 100, 300, 1000])  # Mixed valid/invalid
+
+    def test_update_byte_validation(self):
+        """Test update validates byte range."""
+        corpus = [1, 2, 3]
+        model = Infinigram(corpus)
+
+        # Valid update should work
+        model.update([4, 5, 255])
+        assert model.n == 6
+
+        # Invalid update should raise error
+        with pytest.raises(ValueError, match="New tokens must contain only bytes"):
+            model.update([256])
+
+        with pytest.raises(ValueError, match="New tokens must contain only bytes"):
+            model.update([-1])
 
 
 class TestLongestSuffix:
@@ -109,8 +135,8 @@ class TestLongestSuffix:
         corpus = [1, 2, 3, 4, 5]
         model = Infinigram(corpus)
 
-        # Context [9, 2, 3] - only [2, 3] matches
-        context = [9, 2, 3]
+        # Context [99, 2, 3] - only [2, 3] matches
+        context = [99, 2, 3]
         pos, length = model.longest_suffix(context)
 
         assert length == 2  # Partial match [2, 3]
@@ -120,7 +146,7 @@ class TestLongestSuffix:
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
-        context = [9, 9, 9]
+        context = [99, 98, 97]
         pos, length = model.longest_suffix(context)
 
         assert length == 0  # No match
@@ -183,10 +209,13 @@ class TestContinuations:
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
-        conts = model.continuations([9, 9, 9])
+        conts = model.continuations([99, 98, 97])
 
-        # Should fall back to uniform over vocabulary
-        assert len(conts) == model.vocab_size
+        # Should fall back to unigram distribution (what's in corpus)
+        assert len(conts) == 3  # Only bytes 1, 2, 3 are in corpus
+        assert conts[1] == 1
+        assert conts[2] == 1
+        assert conts[3] == 1
 
     def test_continuations_at_end_of_corpus(self):
         """Test continuations when match is at corpus end."""
@@ -210,13 +239,13 @@ class TestPredict:
         model = Infinigram(corpus)
 
         context = [1, 2]
-        probs = model.predict(context, top_k=10)
+        probs = model.predict(context, top_k=256)  # Get all probabilities
 
         # Check properties
         assert isinstance(probs, dict)
         assert len(probs) > 0
         assert all(0 <= p <= 1 for p in probs.values())
-        assert abs(sum(probs.values()) - 1.0) < 0.1  # Approximately sums to 1
+        assert abs(sum(probs.values()) - 1.0) < 0.01  # Should sum to 1 with all bytes
 
     def test_predict_top_k_limit(self):
         """Test top_k parameter limits results."""
@@ -231,10 +260,10 @@ class TestPredict:
     def test_predict_smoothing(self):
         """Test smoothing assigns probability to unseen tokens."""
         corpus = [1, 2, 3, 1, 2, 4]
-        model = Infinigram(corpus, smoothing=0.1)
+        model = Infinigram(corpus)
 
         context = [1, 2]
-        probs = model.predict(context)
+        probs = model.predict(context, smoothing=0.1)
 
         # Token 5 never follows [1, 2] but should have some probability
         if 5 in model.vocab:
@@ -250,7 +279,10 @@ class TestPredict:
 
         # Should return unigram distribution
         assert len(probs) > 0
-        assert all(p > 0 for p in probs.values())
+        # With smoothing=0, only observed bytes should have non-zero probability
+        assert 1 in probs and probs[1] > 0
+        assert 2 in probs and probs[2] > 0
+        assert 3 in probs and probs[3] > 0
 
     def test_predict_consistent_probabilities(self):
         """Test predictions are consistent across calls."""
@@ -284,7 +316,7 @@ class TestConfidence:
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
-        context = [9, 9, 9]
+        context = [99, 98, 97]
         conf = model.confidence(context)
 
         assert conf == 0.0  # No match = no confidence
@@ -295,7 +327,7 @@ class TestConfidence:
         model = Infinigram(corpus)
 
         # Only last token matches
-        context = [9, 9, 9, 1]
+        context = [99, 98, 97, 1]
         conf = model.confidence(context)
 
         assert 0 <= conf <= 1
@@ -318,7 +350,7 @@ class TestUpdate:
         assert model.corpus == [1, 2, 3, 4, 5, 6]
 
     def test_update_extends_vocabulary(self):
-        """Test update adds new vocabulary."""
+        """Test vocabulary is always fixed at 256 bytes."""
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
@@ -326,7 +358,7 @@ class TestUpdate:
 
         assert 4 in model.vocab
         assert 5 in model.vocab
-        assert model.vocab_size == 5
+        assert model.vocab_size == 256  # Fixed byte vocabulary
 
     def test_update_enables_new_predictions(self):
         """Test updated corpus enables new predictions."""
@@ -396,7 +428,7 @@ class TestEdgeCases:
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
-        context = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        context = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]  # All valid bytes
         probs = model.predict(context)
 
         # Should find partial match or fall back

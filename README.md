@@ -33,7 +33,51 @@ cd infinigram
 pip install -e .
 ```
 
-### Basic Usage
+### Interactive REPL
+
+The easiest way to explore Infinigram is through the interactive REPL:
+
+```bash
+# Launch the REPL
+infinigram-repl
+
+# Or using Python
+python -m infinigram.repl
+```
+
+**Quick REPL Tour:**
+
+```bash
+# Create a dataset (datasets are models!)
+infinigram> /dataset demo
+infinigram [demo]> /load the cat sat on the mat
+
+# Make predictions
+infinigram [demo]> /predict the cat
+# Shows probability distribution for next byte
+
+# Generate completions
+infinigram [demo]> /complete the cat --max 20
+
+# Apply augmentations for case-insensitive matching
+infinigram [demo]> /augment lowercase uppercase
+
+# Create multiple datasets and compare
+infinigram [demo]> /dataset copy demo demo_backup
+infinigram [demo]> /datasets
+infinigram [demo]> /use demo_backup
+
+# Use bash commands for data inspection
+infinigram [demo]> !ls -lh data/
+infinigram [demo]> !head data/sample.txt
+
+# Type /help for all commands
+infinigram [demo]> /help
+```
+
+See [REPL_GUIDE.md](docs/REPL_GUIDE.md) for comprehensive documentation.
+
+### Basic Usage (Python API)
 
 ```python
 from infinigram import Infinigram

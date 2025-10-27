@@ -5,7 +5,7 @@ Simple Infinigram demo - try the model in isolation.
 Run this script to see Infinigram in action!
 """
 
-from langcalc import Infinigram
+from infinigram import Infinigram
 
 
 def main():
@@ -136,7 +136,7 @@ def main():
     print("  • Dynamic corpus updates")
     print("  • Text and numeric data support")
     print("\nTry it yourself:")
-    print("  from langcalc import Infinigram")
+    print("  from infinigram import Infinigram")
     print("  model = Infinigram(your_corpus)")
     print("  probs = model.predict(your_context)")
 

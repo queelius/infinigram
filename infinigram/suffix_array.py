@@ -178,9 +178,13 @@ class SuffixArray:
             elif pattern[i] > self.tokens[pos + i]:
                 return 1
 
-        if prefix_only and pattern_len <= suffix_len:
-            return -1  # Consider pattern as smaller for right boundary
+        # All compared tokens match
+        if prefix_only:
+            # For prefix-only mode (used in right boundary search)
+            # Pattern matches suffix prefix perfectly
+            return 0 if pattern_len <= suffix_len else 1
 
+        # For exact comparison
         if pattern_len < suffix_len:
             return -1
         elif pattern_len > suffix_len:

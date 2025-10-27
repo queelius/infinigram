@@ -10,105 +10,10 @@ longest matching suffix and its continuation probabilities.
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 from collections import defaultdict, Counter
-from abc import ABC, abstractmethod
+from infinigram.suffix_array import SuffixArray
 
 
-class LanguageModel(ABC):
-    """Base interface for all language models in LangCalc."""
-
-    @abstractmethod
-    def predict(self, context: List[int], top_k: int = 50) -> Dict[int, float]:
-        """Return probability distribution over next tokens."""
-        pass
-
-
-class SuffixArray:
-    """
-    Efficient suffix array for O(m log n) pattern matching.
-
-    This is a simplified implementation optimized for Infinigram queries.
-    For full implementation, see langcalc.data.suffix_array.
-    """
-
-    def __init__(self, corpus: List[int]):
-        """
-        Build suffix array from corpus.
-
-        Args:
-            corpus: Token sequence
-        """
-        self.corpus = corpus
-        self.n = len(corpus)
-
-        # Build suffix array: indices sorted by suffix lexicographic order
-        self.sa = self._build_suffix_array()
-
-    def _build_suffix_array(self) -> List[int]:
-        """Build suffix array in O(n log n) time."""
-        # Create list of (suffix, index) tuples
-        suffixes = [(self.corpus[i:], i) for i in range(self.n)]
-
-        # Sort by suffix
-        suffixes.sort(key=lambda x: x[0])
-
-        # Extract indices
-        return [idx for _, idx in suffixes]
-
-    def _compare_suffix(self, idx: int, pattern: List[int]) -> int:
-        """
-        Compare pattern with suffix starting at idx.
-
-        Returns:
-            -1 if pattern < suffix
-             0 if pattern == suffix (up to pattern length)
-             1 if pattern > suffix
-        """
-        m = len(pattern)
-        for i in range(m):
-            if idx + i >= self.n:
-                return 1  # Pattern extends beyond corpus
-
-            if pattern[i] < self.corpus[idx + i]:
-                return -1
-            elif pattern[i] > self.corpus[idx + i]:
-                return 1
-
-        return 0  # Match
-
-    def find_range(self, pattern: List[int]) -> Tuple[int, int]:
-        """
-        Find range [left, right) of suffixes matching pattern.
-
-        Args:
-            pattern: Token sequence to search for
-
-        Returns:
-            (left, right) indices in suffix array, or (0, 0) if not found
-        """
-        if not pattern:
-            return (0, 0)
-
-        # Count all occurrences by linear scan (for now)
-        # TODO: Optimize with binary search
-        matches = []
-        for i in range(self.n):
-            idx = self.sa[i]
-            # Check if pattern matches at this suffix
-            match = True
-            for j in range(len(pattern)):
-                if idx + j >= self.n or self.corpus[idx + j] != pattern[j]:
-                    match = False
-                    break
-            if match:
-                matches.append(i)
-
-        if not matches:
-            return (0, 0)
-
-        return (matches[0], matches[-1] + 1)
-
-
-class Infinigram(LanguageModel):
+class Infinigram:
     """
     Variable-length n-gram model using suffix arrays.
 
@@ -116,40 +21,61 @@ class Infinigram(LanguageModel):
     the longest matching suffix in the corpus and uses its continuations
     for prediction.
 
+    Infinigram operates on byte sequences (0-255), making it compatible with
+    UTF-8 text, arbitrary binary data, and any byte-level representation.
+
     Example:
-        >>> corpus = [1, 2, 3, 4, 2, 3, 5]
+        >>> # Byte-level corpus
+        >>> corpus = [72, 101, 108, 108, 111]  # "Hello" in ASCII
         >>> model = Infinigram(corpus)
-        >>> context = [1, 2, 3]
+        >>> context = [72, 101, 108]  # "Hel"
         >>> probs = model.predict(context)
-        >>> # Finds longest match [2, 3] and returns P(next | [2, 3])
+        >>> # Finds longest match and returns P(next_byte | context)
+
+        >>> # UTF-8 text example
+        >>> text = "Hello world"
+        >>> corpus = list(text.encode('utf-8'))
+        >>> model = Infinigram(corpus)
+        >>> context = list("Hello ".encode('utf-8'))
+        >>> probs = model.predict(context)
     """
 
     def __init__(self,
                  corpus: List[int],
                  max_length: Optional[int] = None,
-                 min_count: int = 1,
-                 smoothing: float = 0.01):
+                 min_count: int = 1):
         """
         Initialize Infinigram from corpus.
 
         Args:
-            corpus: Token sequence (list of integer token IDs)
+            corpus: Byte sequence (list of integers in range 0-255)
             max_length: Maximum suffix length to consider (None = unlimited)
             min_count: Minimum frequency threshold for predictions
-            smoothing: Smoothing parameter for unseen tokens
+
+        Raises:
+            ValueError: If corpus contains values outside byte range (0-255)
         """
+        # Validate byte range
+        if corpus:
+            invalid_bytes = [b for b in corpus if not (0 <= b <= 255)]
+            if invalid_bytes:
+                raise ValueError(
+                    f"Corpus must contain only bytes (0-255). "
+                    f"Found {len(invalid_bytes)} invalid values: "
+                    f"{invalid_bytes[:10]}{'...' if len(invalid_bytes) > 10 else ''}"
+                )
+
         self.corpus = corpus
         self.n = len(corpus)
         self.max_length = max_length
         self.min_count = min_count
-        self.smoothing = smoothing
 
         # Build suffix array
         self.sa = SuffixArray(corpus)
 
-        # Compute vocabulary
-        self.vocab = set(corpus)
-        self.vocab_size = len(self.vocab)
+        # Fixed vocabulary: all 256 possible bytes
+        self.vocab = set(range(256))
+        self.vocab_size = 256
 
     def longest_suffix(self, context: List[int]) -> Tuple[int, int]:
         """
@@ -164,18 +90,40 @@ class Infinigram(LanguageModel):
         if not context:
             return (-1, 0)
 
-        # Try increasingly shorter suffixes
-        max_len = min(len(context), self.max_length if self.max_length else len(context))
+        # Limit context length if max_length is set
+        if self.max_length:
+            context = context[-self.max_length:]
 
-        for length in range(max_len, 0, -1):
-            suffix = context[-length:]
-            start, end = self.sa.find_range(suffix)
+        # Use suffix array's find_longest_suffix method
+        return self.sa.find_longest_suffix(context)
 
-            if end > start:  # Found matches
-                # Return position of first match
-                return (self.sa.sa[start], length)
+    def find_all_suffix_matches(self, context: List[int]) -> List[Tuple[int, List[int]]]:
+        """
+        Find all suffix matches of varying lengths.
 
-        return (-1, 0)  # No match found
+        Args:
+            context: Token sequence
+
+        Returns:
+            List of (suffix_length, positions) tuples, sorted by decreasing length
+        """
+        if not context:
+            return []
+
+        matches = []
+
+        # Limit context length if max_length is set
+        max_len = min(len(context), self.max_length) if self.max_length else len(context)
+
+        # Try all suffix lengths from longest to shortest
+        for suffix_len in range(max_len, 0, -1):
+            suffix = context[-suffix_len:]
+            positions = self.sa.search(suffix)
+
+            if positions:
+                matches.append((suffix_len, positions))
+
+        return matches
 
     def continuations(self, context: List[int]) -> Dict[int, int]:
         """
@@ -195,30 +143,31 @@ class Infinigram(LanguageModel):
         _, length = self.longest_suffix(context)
 
         if length == 0:
-            # No match - return smoothed uniform
-            return {token: 1 for token in self.vocab}
+            # No match - fall back to unigram distribution
+            return Counter(self.corpus)
 
-        # Get range of matching suffixes
+        # Get all positions where the suffix occurs
         suffix = context[-length:]
-        start, end = self.sa.find_range(suffix)
+        positions = self.sa.search(suffix)
 
         # Count continuations
         continuations = defaultdict(int)
-        for i in range(start, end):
-            pos = self.sa.sa[i] + length
-            if pos < self.n:  # Check bounds
-                next_token = self.corpus[pos]
+        for pos in positions:
+            next_pos = pos + length
+            if next_pos < self.n:  # Check bounds
+                next_token = self.corpus[next_pos]
                 continuations[next_token] += 1
 
         return dict(continuations)
 
-    def predict(self, context: List[int], top_k: int = 50) -> Dict[int, float]:
+    def predict(self, context: List[int], top_k: int = 50, smoothing: float = 0.0) -> Dict[int, float]:
         """
         Predict next token probabilities.
 
         Args:
             context: Token sequence
             top_k: Return only top k predictions
+            smoothing: Smoothing parameter for unseen tokens (default: 0.0)
 
         Returns:
             Dict mapping token -> probability
@@ -240,17 +189,117 @@ class Infinigram(LanguageModel):
 
         # Compute probabilities with smoothing
         total = sum(filtered.values())
-        smoothed_total = total + self.smoothing * self.vocab_size
+        smoothed_total = total + smoothing * self.vocab_size
 
         probs = {}
         for token, count in filtered.items():
-            probs[token] = (count + self.smoothing) / smoothed_total
+            probs[token] = (count + smoothing) / smoothed_total
 
         # Add smoothing for unseen tokens in vocab
-        unseen_prob = self.smoothing / smoothed_total
+        unseen_prob = smoothing / smoothed_total
         for token in self.vocab:
             if token not in probs:
                 probs[token] = unseen_prob
+
+        # Sort and return top k
+        sorted_probs = sorted(probs.items(), key=lambda x: -x[1])
+        return dict(sorted_probs[:top_k])
+
+    def predict_weighted(
+        self,
+        context: List[int],
+        min_length: int = 1,
+        max_length: Optional[int] = None,
+        weight_fn: Optional[callable] = None,
+        top_k: int = 50,
+        smoothing: float = 0.0
+    ) -> Dict[int, float]:
+        """
+        Predict using weighted combination of multiple suffix lengths.
+
+        Instead of using only the longest matching suffix, this method combines
+        predictions from all suffix lengths between min_length and max_length,
+        weighted according to the weight function.
+
+        Args:
+            context: Token sequence
+            min_length: Minimum suffix length to consider (default 1)
+            max_length: Maximum suffix length (None = use self.max_length)
+            weight_fn: Function mapping suffix_length -> weight
+                      Default: lambda k: k (linear weighting)
+            top_k: Return top k predictions (default 50)
+            smoothing: Smoothing parameter for unseen tokens (default: 0.0)
+
+        Returns:
+            Dict mapping token -> probability
+
+        Example:
+            >>> from infinigram.weighting import quadratic_weight
+            >>> model = Infinigram([1, 2, 3, 4, 2, 3, 5])
+            >>> probs = model.predict_weighted(
+            ...     [2, 3],
+            ...     min_length=1,
+            ...     max_length=3,
+            ...     weight_fn=quadratic_weight
+            ... )
+        """
+        # Default weight function
+        if weight_fn is None:
+            weight_fn = lambda k: float(k)  # Linear weighting
+
+        # Determine max length
+        if max_length is None:
+            max_length = self.max_length if self.max_length else len(context)
+
+        # Limit context length
+        if self.max_length:
+            context = context[-self.max_length:]
+
+        # Collect weighted counts from all suffix lengths
+        weighted_counts = defaultdict(float)
+        total_weight = 0.0
+
+        for length in range(min_length, min(max_length + 1, len(context) + 1)):
+            # Get suffix of this length
+            suffix = context[-length:] if length <= len(context) else context
+
+            # Find all occurrences
+            positions = self.sa.search(suffix)
+
+            if not positions:
+                continue  # No matches at this length
+
+            # Get weight for this length
+            weight = weight_fn(length)
+            total_weight += weight
+
+            # Count continuations
+            for pos in positions:
+                next_pos = pos + length
+                if next_pos < self.n:
+                    next_token = self.corpus[next_pos]
+                    weighted_counts[next_token] += weight
+
+        # If no matches at any length, fall back to smoothed uniform
+        if total_weight == 0.0 or not weighted_counts:
+            # Uniform over vocabulary with smoothing
+            probs = {token: 1.0 / self.vocab_size for token in self.vocab}
+        else:
+            # Normalize weighted counts to probabilities
+            total_count = sum(weighted_counts.values())
+
+            # Apply smoothing
+            smoothed_total = total_count + smoothing * self.vocab_size
+
+            probs = {}
+            for token, count in weighted_counts.items():
+                probs[token] = (count + smoothing) / smoothed_total
+
+            # Add smoothing for unseen tokens
+            unseen_prob = smoothing / smoothed_total
+            for token in self.vocab:
+                if token not in probs:
+                    probs[token] = unseen_prob
 
         # Sort and return top k
         sorted_probs = sorted(probs.items(), key=lambda x: -x[1])
@@ -277,8 +326,8 @@ class Infinigram(LanguageModel):
 
         # Get number of matches
         suffix = context[-length:]
-        start, end = self.sa.find_range(suffix)
-        num_matches = end - start
+        positions = self.sa.search(suffix)
+        num_matches = len(positions)
 
         # Confidence based on match length and frequency
         length_score = min(length / 10.0, 1.0)  # Normalize by 10 tokens
@@ -296,15 +345,26 @@ class Infinigram(LanguageModel):
         For incremental updates, use IncrementalInfinigram.
 
         Args:
-            new_tokens: Token sequence to add
+            new_tokens: Byte sequence to add (0-255)
+
+        Raises:
+            ValueError: If new_tokens contains values outside byte range (0-255)
         """
+        # Validate byte range
+        if new_tokens:
+            invalid_bytes = [b for b in new_tokens if not (0 <= b <= 255)]
+            if invalid_bytes:
+                raise ValueError(
+                    f"New tokens must contain only bytes (0-255). "
+                    f"Found {len(invalid_bytes)} invalid values: "
+                    f"{invalid_bytes[:10]}{'...' if len(invalid_bytes) > 10 else ''}"
+                )
+
         # Extend corpus
         self.corpus.extend(new_tokens)
         self.n = len(self.corpus)
 
-        # Update vocabulary
-        self.vocab.update(new_tokens)
-        self.vocab_size = len(self.vocab)
+        # Vocabulary is always fixed at 256 bytes (no need to update)
 
         # Rebuild suffix array (TODO: make incremental)
         self.sa = SuffixArray(self.corpus)
