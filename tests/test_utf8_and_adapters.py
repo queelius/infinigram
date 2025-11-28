@@ -202,6 +202,20 @@ class TestAugmentation:
 class TestIdentityAdapter:
     """Test IdentityAdapter."""
 
+    def test_repr(self):
+        """Test IdentityAdapter repr includes class name and encoding."""
+        adapter = IdentityAdapter()
+        repr_str = repr(adapter)
+        assert "IdentityAdapter" in repr_str, "repr should include class name"
+        assert "utf-8" in repr_str, "repr should include default encoding"
+
+    def test_repr_with_custom_encoding(self):
+        """Test IdentityAdapter repr with custom encoding."""
+        adapter = IdentityAdapter(encoding='latin-1')
+        repr_str = repr(adapter)
+        assert "IdentityAdapter" in repr_str
+        assert "latin-1" in repr_str, "repr should show custom encoding"
+
     def test_identity_adapter_bytes_to_tokens(self):
         """Test bytes to tokens is identity."""
         adapter = IdentityAdapter()

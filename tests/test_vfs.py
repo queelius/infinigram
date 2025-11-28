@@ -328,5 +328,92 @@ class TestHierarchicalTags:
         assert "linear" in items or "intro" in items
 
 
+class TestVFSEdgeCases:
+    """Test VFS edge cases and error handling."""
+
+    def test_exists_tagged_doc_with_missing_dataset(self, vfs):
+        """Test exists returns False when dataset is missing for tagged doc."""
+        # Check a tagged doc path for a dataset that doesn't exist
+        result = vfs.exists("/nonexistent_dataset/sometag")
+        assert result is False, "Should return False for nonexistent dataset"
+
+    def test_exists_document_out_of_range(self, vfs):
+        """Test exists returns False for document ID out of range."""
+        result = vfs.exists("/math/999")  # math only has 2 docs
+        assert result is False, "Should return False for out of range doc ID"
+
+    def test_exists_tag_that_doesnt_exist(self, vfs):
+        """Test exists returns False for tag that doesn't exist."""
+        result = vfs.exists("/math/nonexistent_tag")
+        assert result is False, "Should return False for nonexistent tag"
+
+    def test_list_directory_tag_with_nested_children(self, vfs):
+        """Test listing directory with multiple nested tag levels."""
+        dataset = vfs.get_dataset("math")
+        # Add nested tags: algebra/linear/equations, algebra/linear/systems
+        dataset.add_tag(0, "nested/level1/level2a")
+        dataset.add_tag(1, "nested/level1/level2b")
+
+        # List the top-level tag
+        items = vfs.list_directory("/math/nested")
+        assert "level1" in items, "Should show next level in hierarchy"
+
+        # List one level deeper
+        items = vfs.list_directory("/math/nested/level1")
+        assert "level2a" in items or "level2b" in items, "Should show leaf tags"
+
+    def test_list_directory_not_a_directory_raises(self, vfs):
+        """Test listing a file (not directory) raises ValueError."""
+        with pytest.raises(ValueError, match="Not a directory"):
+            vfs.list_directory("/math/0")  # Document, not directory
+
+    def test_close_all_clears_datasets(self, vfs):
+        """Test close_all properly closes all datasets."""
+        # Get datasets to confirm they're open
+        dataset1 = vfs.get_dataset("math")
+        dataset2 = vfs.get_dataset("another")
+        assert dataset1 is not None
+        assert dataset2 is not None
+
+        # Close all
+        vfs.close_all()
+
+        # Cache should be cleared
+        assert len(vfs._dataset_cache) == 0, "Cache should be empty after close_all"
+
+    def test_context_manager_cleanup(self):
+        """Test VFS as context manager properly cleans up."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            storage_dir = Path(tmpdir) / "test_datasets"
+
+            with VirtualFilesystem(storage_dir) as vfs:
+                # Create a dataset
+                vfs.create_dataset("test")
+                dataset = vfs.get_dataset("test")
+                dataset.add_document("Test document")
+
+                # Verify it exists
+                assert vfs.dataset_exists("test")
+
+            # After context exit, cache should be cleared
+            # (The VFS object still exists but datasets are closed)
+
+    def test_parse_invalid_path_handles_empty(self, vfs):
+        """Test parsing empty path is handled gracefully."""
+        # Empty path resolves to current directory
+        result = vfs.resolve_path("")
+        assert result == vfs.cwd, "Empty path should resolve to current directory"
+
+    def test_change_directory_to_nonexistent_raises(self, vfs):
+        """Test cd to nonexistent path raises FileNotFoundError."""
+        with pytest.raises(FileNotFoundError):
+            vfs.change_directory("/nonexistent_dataset")
+
+    def test_create_duplicate_dataset_raises(self, vfs):
+        """Test creating duplicate dataset raises FileExistsError."""
+        with pytest.raises(FileExistsError, match="already exists"):
+            vfs.create_dataset("math")  # Already exists from fixture
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

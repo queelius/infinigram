@@ -166,3 +166,48 @@ class TestWeightComparison:
         """At large k, exponential > quadratic > linear."""
         k = 8
         assert exponential_weight()(k) > quadratic_weight(k) > linear_weight(k)
+
+
+class TestGetWeightFunction:
+    """Test get_weight_function utility."""
+
+    def test_get_weight_function_linear(self):
+        """Test getting linear weight function by name."""
+        from infinigram.weighting import get_weight_function
+        fn = get_weight_function("linear")
+        assert fn(5) == 5.0
+
+    def test_get_weight_function_quadratic(self):
+        """Test getting quadratic weight function by name."""
+        from infinigram.weighting import get_weight_function
+        fn = get_weight_function("quadratic")
+        assert fn(3) == 9.0
+
+    def test_get_weight_function_exponential(self):
+        """Test getting exponential weight function by name."""
+        from infinigram.weighting import get_weight_function
+        fn = get_weight_function("exponential")
+        assert fn(2) == 4.0  # 2^2
+
+    def test_get_weight_function_invalid_name_raises(self):
+        """Test that invalid weight function name raises ValueError."""
+        from infinigram.weighting import get_weight_function
+        with pytest.raises(ValueError, match="Unknown weight function"):
+            get_weight_function("nonexistent")
+
+    def test_get_weight_function_error_lists_available(self):
+        """Test error message lists available functions."""
+        from infinigram.weighting import get_weight_function
+        try:
+            get_weight_function("bad_function_name")
+            assert False, "Should have raised ValueError"
+        except ValueError as e:
+            error_msg = str(e).lower()
+            assert "linear" in error_msg, "Error should list available functions"
+            assert "quadratic" in error_msg, "Error should list available functions"
+
+    def test_get_weight_function_case_sensitive(self):
+        """Test weight function names are case-sensitive."""
+        from infinigram.weighting import get_weight_function
+        with pytest.raises(ValueError):
+            get_weight_function("Linear")  # Should be lowercase
