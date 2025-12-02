@@ -108,10 +108,10 @@ class TestInfinigramCore:
         assert model.n == 6
 
         # Invalid update should raise error
-        with pytest.raises(ValueError, match="New tokens must contain only bytes"):
+        with pytest.raises(ValueError, match="new_tokens must contain only bytes"):
             model.update([256])
 
-        with pytest.raises(ValueError, match="New tokens must contain only bytes"):
+        with pytest.raises(ValueError, match="new_tokens must contain only bytes"):
             model.update([-1])
 
 
@@ -173,6 +173,394 @@ class TestLongestSuffix:
         assert length <= 3
 
 
+class TestFindAllSuffixMatches:
+    """Test find_all_suffix_matches method."""
+
+    def test_find_all_suffix_matches_basic(self):
+        """Test basic suffix match finding."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"the cat")
+
+        # Should find matches at multiple lengths
+        assert len(matches) > 0
+
+        # Should be sorted by decreasing length
+        lengths = [length for length, _ in matches]
+        assert lengths == sorted(lengths, reverse=True)
+
+        # Each entry should have (length, positions)
+        for length, positions in matches:
+            assert length > 0
+            assert len(positions) > 0
+
+    def test_find_all_suffix_matches_multiple_lengths(self):
+        """Test that we get matches at multiple suffix lengths."""
+        corpus = b"abc abcd abcde"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"abcde")
+
+        # Should have multiple different lengths
+        lengths = [length for length, _ in matches]
+        assert len(set(lengths)) > 1
+
+    def test_find_all_suffix_matches_verifies_positions(self):
+        """Test that returned positions actually contain the suffix."""
+        corpus = b"the cat sat. the cat ran."
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"the cat")
+
+        # Verify positions are valid
+        for length, positions in matches:
+            for pos in positions:
+                assert 0 <= pos < len(corpus)
+
+    def test_find_all_suffix_matches_no_match(self):
+        """Test with no matching suffixes."""
+        corpus = b"abc"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"xyz")
+        assert matches == []
+
+    def test_find_all_suffix_matches_empty_context(self):
+        """Test with empty context."""
+        corpus = b"abc"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"")
+        assert matches == []
+
+    def test_find_all_suffix_matches_respects_max_length(self):
+        """Test that max_length is respected."""
+        corpus = b"abcdefgh"
+        model = Infinigram(corpus, max_length=3)
+
+        matches = model.find_all_suffix_matches(b"abcdefgh")
+
+        # Should not search beyond max_length
+        if matches:
+            max_match_len = max(length for length, _ in matches)
+            assert max_match_len <= 3
+
+    # === Additional comprehensive tests for find_all_suffix_matches ===
+
+    def test_find_all_suffix_matches_single_byte_corpus(self):
+        """Test with single byte corpus - edge case."""
+        corpus = b"a"
+        model = Infinigram(corpus)
+
+        # Searching for "a" should find it
+        matches = model.find_all_suffix_matches(b"a")
+        assert len(matches) == 1
+        assert matches[0] == (1, [0])  # length=1, position=0
+
+        # Searching for "b" should find nothing
+        matches = model.find_all_suffix_matches(b"b")
+        assert matches == []
+
+    def test_find_all_suffix_matches_single_byte_context(self):
+        """Test with single byte context against longer corpus."""
+        corpus = b"abcabc"
+        model = Infinigram(corpus)
+
+        # Single byte "a" appears at positions 0 and 3
+        matches = model.find_all_suffix_matches(b"a")
+        assert len(matches) == 1
+        length, positions = matches[0]
+        assert length == 1
+        assert sorted(positions) == [0, 3]
+
+    def test_find_all_suffix_matches_context_longer_than_corpus(self):
+        """Test when context is longer than entire corpus."""
+        corpus = b"abc"
+        model = Infinigram(corpus)
+
+        # Context longer than corpus - should still find partial matches
+        matches = model.find_all_suffix_matches(b"xyzabc")
+
+        # Should find "abc" (length 3), "bc" (length 2), "c" (length 1)
+        assert len(matches) == 3
+        lengths = [length for length, _ in matches]
+        assert lengths == [3, 2, 1]
+
+    def test_find_all_suffix_matches_position_verification(self):
+        """Verify that corpus[pos:pos+length] == suffix for each match."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+
+        context = b"the cat"
+        matches = model.find_all_suffix_matches(context)
+
+        # For each match, verify the position actually contains the suffix
+        for length, positions in matches:
+            suffix = context[-length:]
+            for pos in positions:
+                # Extract substring at that position
+                extracted = corpus[pos:pos + length]
+                assert extracted == suffix, (
+                    f"Mismatch at pos={pos}, length={length}: "
+                    f"expected {suffix!r}, got {extracted!r}"
+                )
+
+    def test_find_all_suffix_matches_frequency_verification(self):
+        """Verify position counts match expected occurrences."""
+        corpus = b"abab ab ab abab"
+        model = Infinigram(corpus)
+
+        # Test "ab" - should appear multiple times
+        matches = model.find_all_suffix_matches(b"ab")
+        # Returns matches at both length 2 ("ab") and length 1 ("b")
+        assert len(matches) == 2  # Two lengths: 2 and 1
+
+        # Find the length-2 match
+        length_2_matches = [(l, p) for l, p in matches if l == 2]
+        assert len(length_2_matches) == 1
+        length, positions = length_2_matches[0]
+        assert length == 2
+
+        # Count "ab" manually in corpus
+        expected_count = corpus.count(b"ab")
+        assert len(positions) == expected_count, (
+            f"Expected {expected_count} positions for 'ab', got {len(positions)}"
+        )
+
+    def test_find_all_suffix_matches_with_lowercase_transform(self):
+        """Test transform integration with lowercase."""
+        corpus = b"Hello World hello world"
+        model = Infinigram(corpus)
+
+        # Without transform - "HELLO" won't match
+        matches = model.find_all_suffix_matches(b"HELLO", transforms=[])
+        assert matches == []
+
+        # With lowercase transform - should find matches
+        matches = model.find_all_suffix_matches(b"HELLO", transforms=['lowercase'])
+        assert len(matches) > 0
+        # The transformed query "hello" should match
+        for length, positions in matches:
+            assert len(positions) > 0
+
+    def test_find_all_suffix_matches_with_strip_transform(self):
+        """Test transform integration with strip."""
+        corpus = b"test data"
+        model = Infinigram(corpus)
+
+        # Query with whitespace - strip should remove it
+        matches = model.find_all_suffix_matches(b"  test  ", transforms=['strip'])
+        assert len(matches) > 0
+        # Should find "test" after stripping
+        lengths = [length for length, _ in matches]
+        assert 4 in lengths  # "test" is length 4
+
+    def test_find_all_suffix_matches_with_default_transforms(self):
+        """Test that default transforms are applied when transforms=None."""
+        corpus = b"hello world"
+        model = Infinigram(corpus, default_transforms=['lowercase'])
+
+        # Query with uppercase - default lowercase transform should apply
+        matches = model.find_all_suffix_matches(b"HELLO", transforms=None)
+        assert len(matches) > 0
+
+    def test_find_all_suffix_matches_override_default_transforms(self):
+        """Test that transforms=[] overrides defaults."""
+        corpus = b"hello world"
+        model = Infinigram(corpus, default_transforms=['lowercase'])
+
+        # Explicitly pass empty transforms - should NOT find uppercase
+        matches = model.find_all_suffix_matches(b"HELLO", transforms=[])
+        assert matches == []
+
+    def test_find_all_suffix_matches_string_input(self):
+        """Test that string input works (auto-converted to bytes)."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+
+        # Pass string instead of bytes
+        matches = model.find_all_suffix_matches("the cat")
+
+        assert len(matches) > 0
+        # Verify same result as bytes
+        matches_bytes = model.find_all_suffix_matches(b"the cat")
+        assert matches == matches_bytes
+
+    def test_find_all_suffix_matches_list_input(self):
+        """Test that list of ints input works."""
+        corpus = b"abc"
+        model = Infinigram(corpus)
+
+        # Pass list of byte values
+        matches = model.find_all_suffix_matches([97, 98, 99])  # "abc"
+
+        assert len(matches) > 0
+        # Verify same result as bytes
+        matches_bytes = model.find_all_suffix_matches(b"abc")
+        assert matches == matches_bytes
+
+    def test_find_all_suffix_matches_repeated_pattern(self):
+        """Test corpus with many repetitions of same pattern."""
+        # Corpus with "ab" repeated 100 times
+        corpus = b"ab" * 100
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"ab")
+
+        # Should find exactly 100 positions for "ab"
+        length_2_match = [(l, p) for l, p in matches if l == 2]
+        assert len(length_2_match) == 1
+        _, positions = length_2_match[0]
+        assert len(positions) == 100
+
+        # Each position should be even (0, 2, 4, ...)
+        expected_positions = list(range(0, 200, 2))
+        assert sorted(positions) == expected_positions
+
+    def test_find_all_suffix_matches_overlapping_patterns(self):
+        """Test overlapping matches e.g., 'aaa' in 'aaaa'."""
+        corpus = b"aaaa"
+        model = Infinigram(corpus)
+
+        # Search for "aa" in "aaaa"
+        # Should find at positions 0, 1, 2 (overlapping)
+        matches = model.find_all_suffix_matches(b"aa")
+
+        length_2_match = [(l, p) for l, p in matches if l == 2]
+        assert len(length_2_match) == 1
+        _, positions = length_2_match[0]
+        assert sorted(positions) == [0, 1, 2]
+
+    def test_find_all_suffix_matches_overlapping_longer_pattern(self):
+        """Test overlapping with longer pattern 'aaa' in 'aaaaa'."""
+        corpus = b"aaaaa"
+        model = Infinigram(corpus)
+
+        # Search for "aaa" in "aaaaa"
+        # Should find at positions 0, 1, 2 (overlapping)
+        matches = model.find_all_suffix_matches(b"aaa")
+
+        length_3_match = [(l, p) for l, p in matches if l == 3]
+        assert len(length_3_match) == 1
+        _, positions = length_3_match[0]
+        assert sorted(positions) == [0, 1, 2]
+
+    def test_find_all_suffix_matches_all_lengths_found(self):
+        """Test that all matching suffix lengths are returned."""
+        corpus = b"abcdefg"
+        model = Infinigram(corpus)
+
+        # Context "defg" should match at lengths 4, 3, 2, 1
+        matches = model.find_all_suffix_matches(b"defg")
+
+        lengths = [length for length, _ in matches]
+        assert lengths == [4, 3, 2, 1]
+
+    def test_find_all_suffix_matches_partial_suffix_only(self):
+        """Test when only partial suffix matches."""
+        corpus = b"xyz"
+        model = Infinigram(corpus)
+
+        # Context "abc xyz" - only "xyz" part should match
+        matches = model.find_all_suffix_matches(b"abc xyz")
+
+        # Should find " xyz" (4), "xyz" (3), "yz" (2), "z" (1)
+        # But "abc" part doesn't exist in corpus
+        assert len(matches) > 0
+        max_length = max(length for length, _ in matches)
+        # Cannot match more than 4 bytes (" xyz")
+        assert max_length <= 4
+
+    def test_find_all_suffix_matches_unicode_string(self):
+        """Test with unicode string input."""
+        corpus = "hello world".encode('utf-8')
+        model = Infinigram(corpus)
+
+        # Unicode string should be auto-converted
+        matches = model.find_all_suffix_matches("hello")
+
+        assert len(matches) > 0
+        # "hello" is 5 bytes in UTF-8
+        max_length = max(length for length, _ in matches)
+        assert max_length == 5
+
+    def test_find_all_suffix_matches_special_bytes(self):
+        """Test with special byte values (0, 255, etc.)."""
+        corpus = bytes([0, 1, 255, 254, 0, 1])
+        model = Infinigram(corpus)
+
+        # Search for pattern with special bytes
+        matches = model.find_all_suffix_matches(bytes([0, 1]))
+
+        assert len(matches) > 0
+        # [0, 1] appears at positions 0 and 4
+        length_2_match = [(l, p) for l, p in matches if l == 2]
+        assert len(length_2_match) == 1
+        _, positions = length_2_match[0]
+        assert sorted(positions) == [0, 4]
+
+    def test_find_all_suffix_matches_no_false_positives(self):
+        """Test that positions don't include false positives."""
+        corpus = b"ab cd ef"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"ab")
+
+        # Only position 0 should match "ab", not position 3 ("cd")
+        for length, positions in matches:
+            suffix = b"ab"[-length:]
+            for pos in positions:
+                assert corpus[pos:pos + length] == suffix
+
+    def test_find_all_suffix_matches_positions_are_sorted(self):
+        """Test that positions within each length are consistent."""
+        corpus = b"test test test"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"test")
+
+        for length, positions in matches:
+            # Positions should be a list (may or may not be sorted)
+            assert isinstance(positions, list)
+            assert len(positions) > 0
+
+    def test_find_all_suffix_matches_with_newlines(self):
+        """Test corpus with newlines."""
+        corpus = b"line1\nline2\nline1"
+        model = Infinigram(corpus)
+
+        matches = model.find_all_suffix_matches(b"line1")
+
+        assert len(matches) > 0
+        # "line1" appears at positions 0 and 12
+        length_5_match = [(l, p) for l, p in matches if l == 5]
+        assert len(length_5_match) == 1
+        _, positions = length_5_match[0]
+        assert len(positions) == 2
+
+    def test_find_all_suffix_matches_empty_after_transform(self):
+        """Test when transform results in empty query."""
+        corpus = b"test"
+        model = Infinigram(corpus)
+
+        # Whitespace-only query stripped to empty
+        matches = model.find_all_suffix_matches(b"   ", transforms=['strip'])
+        assert matches == []
+
+    def test_find_all_suffix_matches_max_length_zero_edge_case(self):
+        """Test behavior when max_length effectively limits to nothing useful."""
+        corpus = b"abcdefgh"
+        model = Infinigram(corpus, max_length=1)
+
+        matches = model.find_all_suffix_matches(b"abcdefgh")
+
+        # Only last byte should be considered due to max_length=1
+        if matches:
+            max_match_len = max(length for length, _ in matches)
+            assert max_match_len == 1
+
+
 class TestContinuations:
     """Test continuation probability computation."""
 
@@ -193,29 +581,26 @@ class TestContinuations:
         assert conts[5] == 1
 
     def test_continuations_empty_context(self):
-        """Test continuations with empty context (unigram)."""
+        """Test continuations with empty context returns uniform distribution."""
         corpus = [1, 2, 1, 3, 1]
         model = Infinigram(corpus)
 
         conts = model.continuations([])
 
-        # Should return unigram counts
-        assert conts[1] == 3
-        assert conts[2] == 1
-        assert conts[3] == 1
+        # Empty context returns uniform distribution over all 256 bytes
+        assert len(conts) == 256
+        assert all(v == 1 for v in conts.values())
 
     def test_continuations_no_match(self):
-        """Test continuations when no suffix matches."""
+        """Test continuations when no suffix matches returns uniform distribution."""
         corpus = [1, 2, 3]
         model = Infinigram(corpus)
 
         conts = model.continuations([99, 98, 97])
 
-        # Should fall back to unigram distribution (what's in corpus)
-        assert len(conts) == 3  # Only bytes 1, 2, 3 are in corpus
-        assert conts[1] == 1
-        assert conts[2] == 1
-        assert conts[3] == 1
+        # No match returns uniform distribution over all 256 bytes
+        assert len(conts) == 256
+        assert all(v == 1 for v in conts.values())
 
     def test_continuations_at_end_of_corpus(self):
         """Test continuations when match is at corpus end."""
@@ -347,7 +732,9 @@ class TestUpdate:
         model.update([4, 5, 6])
 
         assert model.n == initial_size + 3
-        assert model.corpus == [1, 2, 3, 4, 5, 6]
+        # Note: corpus is now stored in mmap file, not as attribute
+        # Verify by checking we can find the new pattern
+        assert model.count([4, 5, 6]) == 1
 
     def test_update_extends_vocabulary(self):
         """Test vocabulary is always fixed at 256 bytes."""

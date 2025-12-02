@@ -2,18 +2,19 @@
 """
 Interactive REPL for Infinigram.
 
-Provides an interactive shell for exploring byte-level language models,
-testing predictions, and configuring model parameters.
+Provides an interactive shell for exploring corpus-based language models,
+testing predictions, and managing models.
+
+All models use the unified mmap-backed Infinigram interface.
 """
 
 import sys
 import shlex
 import json
-import subprocess
-import copy
+import random
+import math
 from pathlib import Path
 from typing import Optional, List, Dict, Any
-import numpy as np
 
 try:
     from prompt_toolkit import prompt
@@ -23,62 +24,33 @@ try:
 except ImportError:
     PROMPT_TOOLKIT_AVAILABLE = False
 
-from infinigram import Infinigram, IdentityAdapter
-from infinigram.corpus_utils import (
-    build_corpus_from_documents,
-    build_corpus_with_augmentation,
-    text_to_bytes,
-    bytes_to_text
-)
-from infinigram.weighting import (
-    linear_weight, quadratic_weight, exponential_weight, sigmoid_weight, get_weight_function
-)
-from infinigram.vfs import VirtualFilesystem
+from infinigram import Infinigram
+from infinigram.weighting import get_weight_function
 
 
-# Registry of available projections/augmentations
-PROJECTION_REGISTRY = {
-    'lowercase': lambda text: text.lower() if isinstance(text, str) else bytes(text).decode('utf-8', errors='replace').lower(),
-    'uppercase': lambda text: text.upper() if isinstance(text, str) else bytes(text).decode('utf-8', errors='replace').upper(),
-    'title': lambda text: text.title() if isinstance(text, str) else bytes(text).decode('utf-8', errors='replace').title(),
-    'strip': lambda text: text.strip() if isinstance(text, str) else bytes(text).decode('utf-8', errors='replace').strip(),
-}
+# Default models directory
+DEFAULT_MODELS_DIR = Path.home() / ".infinigram" / "models"
 
 
 class InfinigramREPL:
-    """Interactive REPL for Infinigram."""
+    """Interactive REPL for Infinigram corpus-based language models."""
 
-    def __init__(self):
+    def __init__(self, models_dir: Optional[Path] = None):
         """Initialize REPL."""
-        # Dataset/Model management
-        self.datasets: Dict[str, Infinigram] = {}  # name -> model
-        self.current_dataset: Optional[str] = None
-        self.adapter = IdentityAdapter()
+        self.models_dir = models_dir or DEFAULT_MODELS_DIR
+        self.models_dir.mkdir(parents=True, exist_ok=True)
 
-        # Document tracking per dataset (for proper separators)
-        self.dataset_documents: Dict[str, List[str]] = {}  # dataset_name -> list of document strings
+        # Current model
+        self.model: Optional[Infinigram] = None
+        self.model_name: Optional[str] = None
 
-        # Projection/augmentation tracking per dataset
-        self.dataset_projections: Dict[str, List[str]] = {}  # dataset_name -> list of projection names
-
-        # Per-dataset configuration (max_length, min_count)
-        self.dataset_config: Dict[str, Dict[str, Any]] = {}  # dataset_name -> config dict
-
-        # Model configuration (REPL-level defaults)
+        # Configuration
         self.temperature = 1.0
         self.top_k = 50
         self.max_length = None
         self.smoothing = 0.0
         self.weight_function = None
         self.min_length = 1
-        self.max_weight_length = None
-
-        # Storage directory
-        self.storage_dir = Path.home() / ".infinigram" / "datasets"
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
-
-        # Virtual filesystem
-        self.vfs = VirtualFilesystem(self.storage_dir)
 
         # Command history
         if PROMPT_TOOLKIT_AVAILABLE:
@@ -86,87 +58,70 @@ class InfinigramREPL:
         else:
             self.history: List[str] = []
 
-        # Commands mapping (new clean structure)
+        # Previous model for cd -
+        self.prev_model: Optional[str] = None
+
+        # Commands
         self.commands = {
             # System
             'help': self.cmd_help,
             'quit': self.cmd_quit,
             'exit': self.cmd_quit,
 
-            # VFS - Navigation
+            # Navigation (Unix-style)
             'pwd': self.cmd_pwd,
             'cd': self.cmd_cd,
-
-            # VFS - Current dataset operations
             'ls': self.cmd_ls,
-            'cat': self.cmd_cat,
-            'rm': self.cmd_rm,
-            'find': self.cmd_find,
-            'grep': self.cmd_find,  # Alias for find
-            'stat': self.cmd_stat,
-            'head': self.cmd_head,
-            'tail': self.cmd_tail,
-            'wc': self.cmd_wc,
-            'du': self.cmd_du,
 
-            # Dataset namespace (ds)
-            'ds': self.cmd_ds,  # With no args, shows current dataset
-            'ds_ls': self.cmd_ds_ls,
-            'ds_cat': self.cmd_ds_cat,
-            'ds_cp': self.cmd_ds_cp,
-            'ds_rm': self.cmd_ds_rm,
-            'ds_info': self.cmd_ds_info,
-            'ds_stats': self.cmd_ds_stats,
+            # Model management
+            'model': self.cmd_model,
+            'models': self.cmd_models,
+            'use': self.cmd_use,
+            'build': self.cmd_build,
+            'info': self.cmd_info,
+            'unload': self.cmd_unload,
 
-            # Storage namespace (store)
-            'save': self.cmd_save,  # Common operation, keep short
-            'load': self.cmd_load,  # Common operation, keep short
-            'store_ls': self.cmd_store_ls,
-            'store_rm': self.cmd_store_rm,
-
-            # Content
-            'add': self.cmd_add,
-
-            # Projection namespace (proj)
-            'proj': self.cmd_proj,  # Set projections
-            'proj_ls': self.cmd_proj_ls,
-            'proj_cat': self.cmd_proj_cat,
-            'proj_rm': self.cmd_proj_rm,
+            # Queries
+            'count': self.cmd_count,
+            'search': self.cmd_search,
+            'context': self.cmd_context,
 
             # Inference
             'predict': self.cmd_predict,
             'complete': self.cmd_complete,
+            'sample': self.cmd_sample,
 
-            # Configuration namespace (set)
-            'set_temperature': self.cmd_set_temperature,
-            'set_top_k': self.cmd_set_top_k,
-            'set_max_length': self.cmd_set_max_length,
-            'set_smoothing': self.cmd_set_smoothing,
-            'set_weight': self.cmd_set_weight,
+            # Configuration
             'config': self.cmd_config,
+            'set': self.cmd_set,
         }
-
-    @property
-    def model(self) -> Optional[Infinigram]:
-        """Get current model."""
-        if self.current_dataset:
-            return self.datasets.get(self.current_dataset)
-        return None
 
     def run(self):
         """Run the REPL."""
         print("=" * 70)
-        print("  INFINIGRAM INTERACTIVE REPL")
+        print("  INFINIGRAM - Corpus-Based Language Model")
         print("=" * 70)
         print()
-        print("Type 'help' for available commands or 'quit' to exit.")
+        print("Type 'help' for commands, 'models' to list available models.")
+        print()
+
+        # Show available models
+        available = self.list_available_models()
+        if available:
+            print(f"Available models: {', '.join(available)}")
+            print("Use 'use <name>' to load a model.")
+        else:
+            print(f"No models found in {self.models_dir}")
+            print("Use 'build <corpus_file> <name>' to create a model.")
         print()
 
         while True:
             try:
-                # Get input
-                # Show VFS path in prompt
-                prompt_str = f"infinigram:{self.vfs.cwd}> "
+                # Build prompt
+                if self.model_name:
+                    prompt_str = f"infinigram[{self.model_name}]> "
+                else:
+                    prompt_str = "infinigram> "
 
                 if PROMPT_TOOLKIT_AVAILABLE:
                     user_input = prompt(
@@ -180,1490 +135,756 @@ class InfinigramREPL:
                 if not user_input:
                     continue
 
-                # Add to history (if not using prompt_toolkit, which does it automatically)
                 if not PROMPT_TOOLKIT_AVAILABLE:
                     self.history.append(user_input)
 
-                # Parse and execute command
+                # Handle shell commands
+                if user_input.startswith('!'):
+                    import subprocess
+                    subprocess.run(user_input[1:], shell=True)
+                    continue
+
                 self.execute(user_input)
                 print()
 
             except KeyboardInterrupt:
                 print("\n(Use 'quit' to exit)")
-                print()
+                continue
             except EOFError:
                 print("\nGoodbye!")
                 break
 
-    def execute(self, user_input: str):
-        """Execute a command or text input."""
-        if user_input.startswith('!'):
-            # Bash command
-            self.execute_bash(user_input[1:])
+    def execute(self, command_line: str):
+        """Execute a command."""
+        try:
+            parts = shlex.split(command_line)
+        except ValueError as e:
+            print(f"Parse error: {e}")
             return
 
-        # Parse command (no / prefix needed)
-        parts = shlex.split(user_input)
         if not parts:
             return
 
-        cmd_name = parts[0]
+        cmd = parts[0].lower()
         args = parts[1:]
 
-        # Handle namespaced commands (e.g., "ds ls", "store save")
-        if len(parts) >= 2 and cmd_name in ['ds', 'store', 'proj', 'set']:
-            # Check if second part is a known subcommand
-            namespace = cmd_name
-            potential_subcmd = parts[1]
-            full_cmd = f"{namespace}_{potential_subcmd}"
-
-            if full_cmd in self.commands:
-                # It's a subcommand, execute it
-                args = parts[2:]
-                self.commands[full_cmd](args)
-            elif cmd_name in self.commands:
-                # Not a subcommand, treat as arguments to base command
-                args = parts[1:]
-                self.commands[cmd_name](args)
-            else:
-                print(f"Unknown command: {cmd_name}")
-                print("Type 'help' for available commands")
-        elif cmd_name in self.commands:
-            # Simple command
-            self.commands[cmd_name](args)
+        if cmd in self.commands:
+            try:
+                self.commands[cmd](args)
+            except Exception as e:
+                print(f"Error: {e}")
         else:
-            print(f"Unknown command: {cmd_name}")
-            print("Type 'help' for available commands")
+            print(f"Unknown command: {cmd}")
+            print("Type 'help' for available commands.")
 
-    def execute_bash(self, command: str):
-        """Execute a bash command."""
-        try:
-            result = subprocess.run(
-                command,
-                shell=True,
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.stdout:
-                print(result.stdout, end='')
-            if result.stderr:
-                print(result.stderr, end='', file=sys.stderr)
-            if result.returncode != 0:
-                print(f"(Command exited with code {result.returncode})")
-        except subprocess.TimeoutExpired:
-            print("Error: Command timed out (30s limit)")
-        except Exception as e:
-            print(f"Error executing command: {e}")
+    def list_available_models(self) -> List[str]:
+        """List models in the models directory."""
+        return Infinigram.list_models(self.models_dir)
 
     # ========================================================================
-    # COMMAND IMPLEMENTATIONS
+    # HELP
     # ========================================================================
 
     def cmd_help(self, args: List[str]):
-        """Show help information."""
-        print("Infinigram REPL - Variable-length n-gram language models")
+        """Show help."""
+        print("INFINIGRAM COMMANDS")
+        print("=" * 70)
         print()
-        print("VFS Navigation:")
-        print("  pwd                       Print working directory")
-        print("  cd <path>                 Change directory")
-        print("  cd /                      Go to root")
-        print("  cd ~                      Go to root (home)")
-        print("  cd -                      Go to previous directory")
-        print("  cd ..                     Go to parent directory")
+        print("Navigation:")
+        print("  pwd                       Show current model context")
+        print("  ls                        List available models")
+        print("  cd <model>                Switch to a model")
+        print("  cd ..                     Unload current model")
+        print("  cd -                      Switch to previous model")
         print()
-        print("Virtual Filesystem (Current Dataset):")
-        print("  ls                        List documents in current dataset")
-        print("  cat <index>               View document by index")
-        print("  rm <index>                Remove document by index")
-        print("  find <pattern>            Search documents by text/regex")
-        print("  grep <pattern>            Search documents (alias for find)")
-        print("  stat [index]              Show statistics for document or dataset")
-        print("  head [n]                  Show first n documents (default: 10)")
-        print("  tail [n]                  Show last n documents (default: 10)")
-        print("  wc [index]                Count words/lines/bytes")
-        print("  du                        Show disk usage per document")
+        print("Model Management:")
+        print("  models                    List available models (alias: ls)")
+        print("  use <name>                Load and use a model (alias: cd)")
+        print("  use <path>                Load model from path")
+        print("  build <file> <name>       Build model from corpus file")
+        print("  build <file> <name> -c N  Chunk size in GB (default: 5)")
+        print("  info                      Show current model info")
+        print("  unload                    Unload current model (alias: cd ..)")
         print()
-        print("Dataset Operations (ds):")
-        print("  ds <name>                 Create or switch to dataset")
-        print("  ds ls                     List datasets in memory")
-        print("  ds cat <dataset>          View documents in a dataset")
-        print("  ds cp <src> <dst>         Copy dataset")
-        print("  ds rm                     Delete current dataset")
-        print("  ds info                   Show dataset information")
-        print("  ds stats                  Show corpus statistics")
-        print()
-        print("Storage Operations (store):")
-        print("  save [name]               Save dataset to disk")
-        print("  load <name>               Load dataset from disk")
-        print("  store ls                  List saved datasets")
-        print("  store rm <name>           Delete saved dataset")
-        print()
-        print("Content:")
-        print("  add <text>                Add text to current dataset")
-        print("  add --file <path>         Add file contents")
-        print("  add --jsonl <path>        Add JSONL file")
-        print()
-        print("Projections (proj):")
-        print("  proj <p1> [p2...]         Apply projections (lowercase, uppercase, etc.)")
-        print("  proj ls                   List active projections")
-        print("  proj ls -a                List available projections")
-        print("  proj cat <projection>     View projection details")
-        print("  proj rm                   Remove all projections")
+        print("Queries:")
+        print("  count <pattern>           Count pattern occurrences")
+        print("  search <pattern>          Search for pattern")
+        print("  search <p> -n N           Limit results (default: 5)")
+        print("  search <p> -w N           Context window (default: 60)")
+        print("  context <pos>             Show context at position")
         print()
         print("Inference:")
-        print("  predict <text>            Show next-byte probabilities")
-        print("  predict <text> --bytes    Show as raw bytes")
-        print("  complete <text>           Generate completion")
-        print("  complete <text> --max N   Generate N bytes")
+        print("  predict <text>            Predict next byte probabilities")
+        print("  predict <text> -n N       Show top N (default: 10)")
+        print("  predict <text> -b         Show as bytes")
+        print("  complete <text>           Generate text completion")
+        print("  complete <text> -n N      Generate N bytes (default: 50)")
+        print("  complete <text> -t T      Temperature (default: 1.0)")
+        print("  sample <text> -n N        Sample N completions")
         print()
-        print("Configuration (set):")
-        print("  set temperature <val>     Set sampling temperature (default: 1.0)")
-        print("  set top_k <n>             Set top-k predictions (default: 50)")
-        print("  set max_length <n>        Set max suffix length (default: unlimited)")
-        print("  set smoothing <val>       Set smoothing parameter (default: 0.0)")
-        print("  set weight <func>         Set weight function (linear, quadratic, ...)")
-        print("  config                    Show all configuration")
+        print("Configuration:")
+        print("  config                    Show current settings")
+        print("  set temperature <val>     Set sampling temperature")
+        print("  set top_k <n>             Set top-k for predictions")
+        print("  set max_length <n>        Set max context length")
+        print("  set smoothing <val>       Set Laplace smoothing")
+        print("  set weight <func>         Weight function (linear, quadratic, ...)")
         print()
         print("System:")
         print("  help                      Show this help")
         print("  quit, exit                Exit REPL")
-        print("  !<command>                Execute bash command")
+        print("  !<command>                Execute shell command")
         print()
 
+    def cmd_quit(self, args: List[str]):
+        """Exit the REPL."""
+        print("Goodbye!")
+        sys.exit(0)
+
     # ========================================================================
-    # VFS NAVIGATION COMMANDS
+    # NAVIGATION
     # ========================================================================
 
     def cmd_pwd(self, args: List[str]):
-        """Print current working directory."""
-        print(self.vfs.cwd)
+        """Show current model context (like Unix pwd)."""
+        if self.model_name:
+            model_path = self.models_dir / self.model_name
+            print(f"/{self.model_name}")
+            print(f"  Path: {model_path}")
+            print(f"  Size: {self.model.n:,} bytes")
+        else:
+            print("/")
+            print(f"  Models dir: {self.models_dir}")
+            print("  No model loaded")
 
     def cmd_cd(self, args: List[str]):
-        """Change directory."""
+        """Change to a model (like Unix cd)."""
         if not args:
-            # cd with no args goes to root
-            path = '/'
-        else:
-            path = args[0]
+            # cd with no args - go to root (unload)
+            if self.model_name:
+                self.prev_model = self.model_name
+                self.cmd_unload([])
+            else:
+                print("/")
+            return
 
-        try:
-            new_dir = self.vfs.change_directory(path)
-            print(new_dir)
-        except (ValueError, FileNotFoundError) as e:
-            print(f"cd: {e}")
+        target = args[0]
 
-    # ========================================================================
-    # VFS COMMANDS (Current Dataset Operations)
-    # ========================================================================
+        # Handle special cases
+        if target == '..':
+            # Go up (unload model)
+            if self.model_name:
+                self.prev_model = self.model_name
+                self.cmd_unload([])
+            else:
+                print("Already at root")
+            return
+
+        if target == '-':
+            # Switch to previous model
+            if self.prev_model:
+                old_model = self.model_name
+                self.cmd_use([self.prev_model])
+                self.prev_model = old_model
+            else:
+                print("No previous model")
+            return
+
+        if target == '~' or target == '/':
+            # Go to root
+            if self.model_name:
+                self.prev_model = self.model_name
+                self.cmd_unload([])
+            return
+
+        # Strip leading / if present
+        if target.startswith('/'):
+            target = target[1:]
+
+        # Try to load the model
+        old_model = self.model_name
+        self.cmd_use([target])
+
+        # Update prev_model if load succeeded
+        if self.model_name and self.model_name != old_model:
+            self.prev_model = old_model
 
     def cmd_ls(self, args: List[str]):
-        """List documents in the current dataset."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            print("Usage: ds <name> to select a dataset")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if not docs:
-            print(f"Dataset '{self.current_dataset}' is empty")
-            return
-
-        print(f"Documents in '{self.current_dataset}':")
-        for i, doc in enumerate(docs):
-            # Truncate long documents for display
-            preview = doc[:60] + "..." if len(doc) > 60 else doc
-            # Replace newlines with \n for single-line display
-            preview = preview.replace('\n', '\\n')
-            print(f"  [{i}] {preview}")
-
-        print(f"\nTotal: {len(docs)} documents")
-
-    def cmd_cat(self, args: List[str]):
-        """View a document by index."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        if not args:
-            print("Usage: cat <index>")
-            return
-
-        try:
-            index = int(args[0])
-        except ValueError:
-            print(f"Error: Invalid index '{args[0]}'")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if index < 0 or index >= len(docs):
-            print(f"Error: Index {index} out of range (0-{len(docs)-1})")
-            return
-
-        print(f"Document [{index}] in '{self.current_dataset}':")
-        print("-" * 70)
-        print(docs[index])
-        print("-" * 70)
-
-    def cmd_rm(self, args: List[str]):
-        """Remove a document by index."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        if not args:
-            print("Usage: rm <index>")
-            return
-
-        try:
-            index = int(args[0])
-        except ValueError:
-            print(f"Error: Invalid index '{args[0]}'")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if index < 0 or index >= len(docs):
-            print(f"Error: Index {index} out of range (0-{len(docs)-1})")
-            return
-
-        # Show what we're removing
-        removed_doc = docs[index]
-        preview = removed_doc[:60] + "..." if len(removed_doc) > 60 else removed_doc
-        preview = preview.replace('\n', '\\n')
-
-        # Remove from document list
-        docs.pop(index)
-
-        # Rebuild corpus
-        corpus = build_corpus_from_documents(docs, separator=b"\x00")
-
-        # Rebuild model with projections if any
-        projections = self.dataset_projections.get(self.current_dataset, [])
-        if projections:
-            corpus = build_corpus_with_augmentation(
-                docs,
-                projections,
-                separator=b"\x00"
-            )
-        else:
-            corpus = build_corpus_from_documents(docs, separator=b"\x00")
-
-        # Recreate model
-        self.datasets[self.current_dataset] = Infinigram(
-            corpus,
-            max_length=self.max_length
-        )
-
-        print(f"✓ Removed document [{index}]: {preview}")
-        print(f"  Remaining documents: {len(docs)}")
-        print(f"  Corpus size: {len(corpus)} bytes")
-
-    def cmd_find(self, args: List[str]):
-        """Search for documents containing a pattern (text or regex)."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        if not args:
-            print("Usage: find <pattern>")
-            print("       grep <pattern>")
-            return
-
-        import re
-        pattern = ' '.join(args)
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if not docs:
-            print(f"Dataset '{self.current_dataset}' is empty")
-            return
-
-        # Try to compile as regex, fall back to plain text search
-        try:
-            regex = re.compile(pattern, re.IGNORECASE)
-            use_regex = True
-        except re.error:
-            use_regex = False
-
-        matches = []
-        for i, doc in enumerate(docs):
-            if use_regex:
-                if regex.search(doc):
-                    matches.append(i)
-            else:
-                if pattern.lower() in doc.lower():
-                    matches.append(i)
-
-        if not matches:
-            print(f"No documents found matching: {pattern}")
-            return
-
-        print(f"Found {len(matches)} document(s) matching '{pattern}':")
-        for i in matches:
-            preview = docs[i][:60] + "..." if len(docs[i]) > 60 else docs[i]
-            preview = preview.replace('\n', '\\n')
-            print(f"  [{i}] {preview}")
-
-    def cmd_stat(self, args: List[str]):
-        """Show statistics for a document or the entire dataset."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-
-        if not args:
-            # Dataset-level stats
-            if not docs:
-                print(f"Dataset '{self.current_dataset}' is empty")
-                return
-
-            total_chars = sum(len(doc) for doc in docs)
-            total_words = sum(len(doc.split()) for doc in docs)
-            total_lines = sum(doc.count('\n') + 1 for doc in docs)
-
-            avg_chars = total_chars / len(docs) if docs else 0
-            avg_words = total_words / len(docs) if docs else 0
-
-            min_len = min(len(doc) for doc in docs) if docs else 0
-            max_len = max(len(doc) for doc in docs) if docs else 0
-
-            print(f"Statistics for dataset '{self.current_dataset}':")
-            print(f"  Documents: {len(docs)}")
-            print(f"  Total characters: {total_chars}")
-            print(f"  Total words: {total_words}")
-            print(f"  Total lines: {total_lines}")
-            print(f"  Average chars/doc: {avg_chars:.1f}")
-            print(f"  Average words/doc: {avg_words:.1f}")
-            print(f"  Shortest document: {min_len} chars")
-            print(f"  Longest document: {max_len} chars")
-
-            if self.model:
-                print(f"  Corpus size: {self.model.n} bytes")
-                print(f"  Vocabulary size: {len(set(self.model.corpus))}")
-        else:
-            # Document-level stats
-            try:
-                index = int(args[0])
-            except ValueError:
-                print(f"Error: Invalid index '{args[0]}'")
-                return
-
-            if index < 0 or index >= len(docs):
-                print(f"Error: Index {index} out of range (0-{len(docs)-1})")
-                return
-
-            doc = docs[index]
-            chars = len(doc)
-            words = len(doc.split())
-            lines = doc.count('\n') + 1
-
-            print(f"Statistics for document [{index}]:")
-            print(f"  Characters: {chars}")
-            print(f"  Words: {words}")
-            print(f"  Lines: {lines}")
-            print(f"  Average word length: {chars/words:.1f}" if words > 0 else "  No words")
-            print(f"\nPreview:")
-            preview = doc[:100] + "..." if len(doc) > 100 else doc
-            print(f"  {preview}")
-
-    def cmd_head(self, args: List[str]):
-        """Show first N documents (default 10)."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if not docs:
-            print(f"Dataset '{self.current_dataset}' is empty")
-            return
-
-        n = 10
-        if args:
-            try:
-                n = int(args[0])
-            except ValueError:
-                print(f"Error: Invalid number '{args[0]}'")
-                return
-
-        n = min(n, len(docs))
-
-        print(f"First {n} documents in '{self.current_dataset}':")
-        for i in range(n):
-            preview = docs[i][:60] + "..." if len(docs[i]) > 60 else docs[i]
-            preview = preview.replace('\n', '\\n')
-            print(f"  [{i}] {preview}")
-
-    def cmd_tail(self, args: List[str]):
-        """Show last N documents (default 10)."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if not docs:
-            print(f"Dataset '{self.current_dataset}' is empty")
-            return
-
-        n = 10
-        if args:
-            try:
-                n = int(args[0])
-            except ValueError:
-                print(f"Error: Invalid number '{args[0]}'")
-                return
-
-        n = min(n, len(docs))
-        start_idx = len(docs) - n
-
-        print(f"Last {n} documents in '{self.current_dataset}':")
-        for i in range(start_idx, len(docs)):
-            preview = docs[i][:60] + "..." if len(docs[i]) > 60 else docs[i]
-            preview = preview.replace('\n', '\\n')
-            print(f"  [{i}] {preview}")
-
-    def cmd_wc(self, args: List[str]):
-        """Count words, lines, and bytes (like Unix wc)."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-
-        if not args:
-            # Count for entire dataset
-            if not docs:
-                print(f"Dataset '{self.current_dataset}' is empty")
-                return
-
-            total_lines = sum(doc.count('\n') + 1 for doc in docs)
-            total_words = sum(len(doc.split()) for doc in docs)
-            total_bytes = sum(len(doc.encode('utf-8')) for doc in docs)
-
-            print(f"  {total_lines:8} {total_words:8} {total_bytes:8} {self.current_dataset}")
-        else:
-            # Count for specific document
-            try:
-                index = int(args[0])
-            except ValueError:
-                print(f"Error: Invalid index '{args[0]}'")
-                return
-
-            if index < 0 or index >= len(docs):
-                print(f"Error: Index {index} out of range (0-{len(docs)-1})")
-                return
-
-            doc = docs[index]
-            lines = doc.count('\n') + 1
-            words = len(doc.split())
-            bytes_count = len(doc.encode('utf-8'))
-
-            print(f"  {lines:8} {words:8} {bytes_count:8} document[{index}]")
-
-    def cmd_du(self, args: List[str]):
-        """Show disk usage (size) per document."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        docs = self.dataset_documents.get(self.current_dataset, [])
-        if not docs:
-            print(f"Dataset '{self.current_dataset}' is empty")
-            return
-
-        print(f"Disk usage for '{self.current_dataset}':")
-
-        total_bytes = 0
-        doc_sizes = []
-
-        for i, doc in enumerate(docs):
-            size = len(doc.encode('utf-8'))
-            total_bytes += size
-            doc_sizes.append((i, size, doc))
-
-        # Sort by size (descending)
-        doc_sizes.sort(key=lambda x: x[1], reverse=True)
-
-        # Show top 20 or all if less
-        show_count = min(20, len(doc_sizes))
-
-        for i, size, doc in doc_sizes[:show_count]:
-            preview = doc[:40] + "..." if len(doc) > 40 else doc
-            preview = preview.replace('\n', '\\n')
-            print(f"  {size:6} bytes  [{i:3}] {preview}")
-
-        if len(docs) > show_count:
-            print(f"  ... ({len(docs) - show_count} more documents)")
-
-        print(f"\nTotal: {total_bytes} bytes across {len(docs)} documents")
+        """List available models (like Unix ls)."""
+        self.cmd_models(args)
 
     # ========================================================================
-    # DATASET NAMESPACE COMMANDS
+    # MODEL MANAGEMENT
     # ========================================================================
 
-    def cmd_ds(self, args: List[str]):
-        """Create or switch to a dataset."""
-        if not args:
-            if self.current_dataset:
-                print(f"Current dataset: {self.current_dataset}")
-            else:
-                print("No dataset selected")
-            print("Usage: ds <name>")
+    def cmd_models(self, args: List[str]):
+        """List available models."""
+        models = self.list_available_models()
+
+        if not models:
+            print(f"No models found in {self.models_dir}")
+            print("Use 'build <corpus_file> <name>' to create a model.")
             return
 
-        # Create or switch
+        print("Available Models:")
+        print("-" * 70)
+        for name in models:
+            model_path = self.models_dir / name
+            meta_file = model_path / "meta.json"
+
+            if meta_file.exists():
+                with open(meta_file) as f:
+                    meta = json.load(f)
+                size = meta.get('corpus_size', meta.get('n', 0))
+                size_str = self._format_size(size)
+                chunks = meta.get('num_chunks', 1)
+                chunk_str = f" ({chunks} chunks)" if chunks > 1 else ""
+                loaded = " [loaded]" if name == self.model_name else ""
+                print(f"  {name}: {size_str}{chunk_str}{loaded}")
+            else:
+                print(f"  {name}: (metadata not found)")
+
+        print("-" * 70)
+        print(f"Total: {len(models)} models")
+
+    def cmd_model(self, args: List[str]):
+        """Alias for 'use' command."""
+        self.cmd_use(args)
+
+    def cmd_use(self, args: List[str]):
+        """Load and use a model."""
+        if not args:
+            if self.model_name:
+                print(f"Current model: {self.model_name}")
+                self.cmd_info([])
+            else:
+                print("No model loaded")
+                print("Usage: use <name>")
+            return
+
         name = args[0]
 
-        # Create if doesn't exist
-        if name not in self.datasets:
-            # Create empty model
-            self.datasets[name] = Infinigram(
-                [],  # Empty corpus initially
-                max_length=self.max_length
-            )
-            # Initialize document list
-            self.dataset_documents[name] = []
-            print(f"✓ Created dataset: {name}")
+        # Check if it's a path
+        path = Path(name)
+        if path.exists() and path.is_dir():
+            model_path = path
+            name = path.name
+        else:
+            model_path = self.models_dir / name
 
-        # Switch to it
-        self.current_dataset = name
-        print(f"✓ Switched to dataset: {name}")
-
-    def cmd_ds_ls(self, args: List[str]):
-        """List all datasets in memory."""
-        if not self.datasets:
-            print("No datasets loaded")
+        if not model_path.exists():
+            print(f"Model '{name}' not found")
+            print(f"Available models: {', '.join(self.list_available_models())}")
             return
 
-        print("Datasets in memory:")
-        for name, model in self.datasets.items():
-            current = " (current)" if name == self.current_dataset else ""
-            num_docs = len(self.dataset_documents.get(name, []))
-            projs = self.dataset_projections.get(name, [])
-            proj_str = f" [{', '.join(projs)}]" if projs else ""
-            print(f"  {name}: {model.n} bytes, {num_docs} docs{proj_str}{current}")
+        print(f"Loading model '{name}'...")
+        try:
+            self.model = Infinigram.load(str(model_path))
+            self.model_name = name
+            print(f"Loaded: {self.model}")
+        except Exception as e:
+            print(f"Failed to load model: {e}")
 
-    def cmd_ds_cat(self, args: List[str]):
-        """View documents in a specific dataset."""
-        if not args:
-            print("Usage: ds cat <dataset>")
-            return
-
-        dataset_name = args[0]
-
-        if dataset_name not in self.datasets:
-            print(f"Dataset '{dataset_name}' not found")
-            return
-
-        docs = self.dataset_documents.get(dataset_name, [])
-        if not docs:
-            print(f"Dataset '{dataset_name}' is empty")
-            return
-
-        print(f"Documents in '{dataset_name}':")
-        for i, doc in enumerate(docs):
-            # Truncate long documents for display
-            preview = doc[:60] + "..." if len(doc) > 60 else doc
-            # Replace newlines with \n for single-line display
-            preview = preview.replace('\n', '\\n')
-            print(f"  [{i}] {preview}")
-
-        print(f"\nTotal: {len(docs)} documents")
-
-    def cmd_ds_cp(self, args: List[str]):
-        """Copy a dataset."""
+    def cmd_build(self, args: List[str]):
+        """Build a model from corpus file."""
         if len(args) < 2:
-            print("Usage: ds cp <source> <destination>")
+            print("Usage: build <corpus_file> <name> [-c chunk_size_gb]")
             return
 
-        src_name = args[0]
-        dst_name = args[1]
+        corpus_file = Path(args[0])
+        name = args[1]
+        chunk_size = 5.0
 
-        if src_name not in self.datasets:
-            print(f"Source dataset '{src_name}' not found")
+        # Parse options
+        i = 2
+        while i < len(args):
+            if args[i] == '-c' and i + 1 < len(args):
+                chunk_size = float(args[i + 1])
+                i += 2
+            else:
+                i += 1
+
+        if not corpus_file.exists():
+            print(f"Corpus file not found: {corpus_file}")
             return
 
-        if dst_name in self.datasets:
-            print(f"Destination dataset '{dst_name}' already exists")
+        model_path = self.models_dir / name
+        if model_path.exists():
+            print(f"Model '{name}' already exists. Delete it first.")
             return
 
-        # Deep copy the model
-        src_model = self.datasets[src_name]
-        dst_model = Infinigram(
-            list(src_model.corpus),  # Copy corpus
-            max_length=src_model.max_length,
-            min_count=src_model.min_count
-        )
+        print(f"Building model '{name}' from {corpus_file}...")
+        print(f"Chunk size: {chunk_size} GB")
 
-        self.datasets[dst_name] = dst_model
-
-        # Copy document tracking
-        if src_name in self.dataset_documents:
-            self.dataset_documents[dst_name] = list(self.dataset_documents[src_name])
-
-        # Copy projection tracking
-        if src_name in self.dataset_projections:
-            self.dataset_projections[dst_name] = list(self.dataset_projections[src_name])
-
-        # Copy config
-        if src_name in self.dataset_config:
-            self.dataset_config[dst_name] = dict(self.dataset_config[src_name])
-
-        print(f"✓ Copied dataset '{src_name}' to '{dst_name}'")
-        print(f"  Size: {dst_model.n} bytes")
-
-    def cmd_ds_rm(self, args: List[str]):
-        """Delete current dataset."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        name = self.current_dataset
-        del self.datasets[name]
-
-        # Clean up associated data
-        if name in self.dataset_documents:
-            del self.dataset_documents[name]
-        if name in self.dataset_projections:
-            del self.dataset_projections[name]
-        if name in self.dataset_config:
-            del self.dataset_config[name]
-
-        self.current_dataset = None
-
-        print(f"✓ Deleted dataset: {name}")
-
-        # Switch to first available dataset if any
-        if self.datasets:
-            self.current_dataset = list(self.datasets.keys())[0]
-            print(f"Switched to: {self.current_dataset}")
-
-    def cmd_ds_info(self, args: List[str]):
-        """Show current dataset information."""
-        if not self.model:
-            print("No dataset selected")
-            return
-
-        num_docs = len(self.dataset_documents.get(self.current_dataset, []))
-        projs = self.dataset_projections.get(self.current_dataset, [])
-
-        print(f"Dataset: {self.current_dataset}")
-        print(f"  Corpus size: {self.model.n} bytes")
-        print(f"  Documents: {num_docs}")
-        print(f"  Vocabulary size: {self.model.vocab_size}")
-        print(f"  Max suffix length: {self.model.max_length or 'unlimited'}")
-        print(f"  Min count: {self.model.min_count}")
-        if projs:
-            print(f"  Active projections: {', '.join(projs)}")
-
-    def cmd_ds_stats(self, args: List[str]):
-        """Show corpus statistics."""
-        if not self.model:
-            print("No dataset selected")
-            return
-
-        corpus = self.model.corpus
-
-        print(f"Corpus Statistics for '{self.current_dataset}':")
-        print(f"  Total bytes: {len(corpus)}")
-        print(f"  Unique bytes: {len(set(corpus))}")
-
-        # Byte frequency
-        from collections import Counter
-        freq = Counter(corpus)
-        most_common = freq.most_common(10)
-
-        print(f"\n  Most common bytes:")
-        for byte_val, count in most_common:
-            char_repr = chr(byte_val) if 32 <= byte_val <= 126 else f"0x{byte_val:02X}"
-            print(f"    {char_repr} (byte {byte_val}): {count} times ({100*count/len(corpus):.1f}%)")
-
-    def cmd_use_OLD(self, args: List[str]):
-        """REMOVED - use 'ds <name>' instead."""
-        if not args:
-            print("Usage: /use <name>")
-            return
-
-        name = args[0]
-        if name not in self.datasets:
-            print(f"Dataset '{name}' not found")
-            print("Available datasets:", ', '.join(self.datasets.keys()))
-            return
-
-        self.current_dataset = name
-        print(f"✓ Switched to dataset: {name}")
-
-
-    def _load_text_file(self, args: List[str]) -> Optional[str]:
-        """Load text from file."""
-        if not args:
-            print("Usage: /add --file <path>")
-            return None
-
-        file_path = args[0]
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
-            print(f"Loaded {len(text)} characters from {file_path}")
-            return text
+            self.model = Infinigram.build(
+                str(corpus_file),
+                str(model_path),
+                chunk_size_gb=chunk_size,
+                verbose=True
+            )
+            self.model_name = name
+            print(f"\nModel built: {self.model}")
         except Exception as e:
-            print(f"Error loading file: {e}")
-            return None
+            print(f"Build failed: {e}")
 
-    def _load_jsonl(self, args: List[str]) -> Optional[str]:
-        """Load text from JSONL file."""
-        if not args:
-            print("Usage: /add --jsonl <path> [--field <field_name>]")
-            return None
-
-        file_path = args[0]
-        field_name = 'text'  # Default field
-
-        # Check for --field argument
-        if '--field' in args:
-            idx = args.index('--field')
-            if idx + 1 < len(args):
-                field_name = args[idx + 1]
-
-        documents = []
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                for i, line in enumerate(f, 1):
-                    try:
-                        obj = json.loads(line.strip())
-                        if field_name in obj:
-                            documents.append(obj[field_name])
-                        else:
-                            print(f"Warning: Line {i} missing field '{field_name}'")
-                    except json.JSONDecodeError as e:
-                        print(f"Warning: Line {i} invalid JSON: {e}")
-
-            print(f"Loaded {len(documents)} documents from {file_path}")
-
-            # Build corpus with document separators
-            corpus_bytes = build_corpus_from_documents(documents, separator=b"\x00")
-            return bytes_to_text(corpus_bytes)
-
-        except Exception as e:
-            print(f"Error loading JSONL: {e}")
-            return None
-
-    def cmd_add(self, args: List[str]):
-        """Add text to current dataset."""
-        if not args:
-            print("Usage: /add <text> or /add --file <path> or /add --jsonl <path>")
-            return
-
-        # Require explicit dataset selection
-        if not self.current_dataset:
-            print("No dataset selected. Use /dataset <name> to create or switch to a dataset.")
-            return
-
-        # Parse add type
-        if args[0] == '--file':
-            text = self._load_text_file(args[1:])
-        elif args[0] == '--jsonl':
-            text = self._load_jsonl(args[1:])
-        else:
-            # Add from command line
-            text = ' '.join(args)
-
-        if text is None:
-            return
-
-        # Append to document list
-        if self.current_dataset not in self.dataset_documents:
-            self.dataset_documents[self.current_dataset] = []
-        self.dataset_documents[self.current_dataset].append(text)
-
-        # Check if dataset has active projections
-        active_projections = self.dataset_projections.get(self.current_dataset, [])
-
-        if active_projections:
-            # Auto-reapply projections to maintain consistency
-            aug_functions = [PROJECTION_REGISTRY[name] for name in active_projections]
-            corpus = build_corpus_with_augmentation(
-                self.dataset_documents[self.current_dataset],
-                augmentations=aug_functions,
-                separator=b"\x00"  # NULL byte separator
-            )
-            print(f"✓ Added document to '{self.current_dataset}' (with {len(active_projections)} projection(s))")
-        else:
-            # No projections, just build corpus normally
-            corpus = build_corpus_from_documents(
-                self.dataset_documents[self.current_dataset],
-                separator=b"\x00"  # NULL byte separator
-            )
-            print(f"✓ Added document to '{self.current_dataset}'")
-
-        # Rebuild model
-        self.datasets[self.current_dataset] = Infinigram(
-            corpus,
-            max_length=self.max_length
-        )
-
-        print(f"  Total corpus size: {len(corpus)} bytes ({len(self.dataset_documents[self.current_dataset])} documents)")
-
-    def cmd_proj(self, args: List[str]):
-        """Apply projections to augment current dataset."""
+    def cmd_info(self, args: List[str]):
+        """Show current model info."""
         if not self.model:
-            print("No dataset selected. Use ds <name> or load <name> first.")
+            print("No model loaded")
+            return
+
+        print(f"Model: {self.model_name}")
+        print(f"  Corpus size: {self._format_size(self.model.n)}")
+        print(f"  Vocabulary: 256 bytes")
+
+        if self.model._is_chunked:
+            print(f"  Chunks: {self.model._sa.num_chunks}")
+
+        if self.model.max_length:
+            print(f"  Max length: {self.model.max_length}")
+
+        print(f"  Path: {self.model.model_path}")
+
+    def cmd_unload(self, args: List[str]):
+        """Unload current model."""
+        if self.model:
+            self.model.close()
+            print(f"Unloaded model '{self.model_name}'")
+            self.model = None
+            self.model_name = None
+        else:
+            print("No model loaded")
+
+    # ========================================================================
+    # QUERIES
+    # ========================================================================
+
+    def cmd_count(self, args: List[str]):
+        """Count pattern occurrences."""
+        if not self.model:
+            print("No model loaded. Use 'use <name>' first.")
             return
 
         if not args:
-            print("Usage: proj <projection> [<projection2> ...]")
-            print("Available projections:", ', '.join(sorted(PROJECTION_REGISTRY.keys())))
+            print("Usage: count <pattern>")
             return
 
-        # Validate projections
-        invalid = [p for p in args if p not in PROJECTION_REGISTRY]
-        if invalid:
-            print(f"Unknown projections: {', '.join(invalid)}")
-            print("Available:", ', '.join(sorted(PROJECTION_REGISTRY.keys())))
+        pattern = ' '.join(args)
+        pattern_bytes = pattern.encode('utf-8')
+
+        count = self.model.count(pattern_bytes)
+        print(f"'{pattern}': {count:,} occurrences")
+
+    def cmd_search(self, args: List[str]):
+        """Search for pattern and show context."""
+        if not self.model:
+            print("No model loaded. Use 'use <name>' first.")
             return
 
-        print(f"Applying {len(args)} projection(s) to '{self.current_dataset}'...")
-
-        # Get original documents (not the augmented corpus)
-        if self.current_dataset not in self.dataset_documents:
-            print("Error: No original documents found for this dataset")
-            return
-
-        original_documents = self.dataset_documents[self.current_dataset]
-        if not original_documents:
-            print("Error: Dataset has no documents")
-            return
-
-        # Build augmentation functions
-        aug_functions = [PROJECTION_REGISTRY[name] for name in args]
-
-        # Apply augmentations to original documents
-        augmented_corpus = build_corpus_with_augmentation(
-            original_documents,
-            augmentations=aug_functions,
-            separator=b"\x00"  # NULL byte separator
-        )
-
-        # Replace model with augmented version
-        original_size = self.model.n
-        self.datasets[self.current_dataset] = Infinigram(
-            augmented_corpus,
-            max_length=self.max_length
-        )
-
-        # Track applied projections (replace previous projections)
-        self.dataset_projections[self.current_dataset] = list(args)
-
-        print(f"✓ Applied projections: {', '.join(args)}")
-        print(f"  Original size: {original_size} bytes")
-        print(f"  Augmented size: {self.model.n} bytes")
-        if original_size > 0:
-            print(f"  Multiplier: {self.model.n / original_size:.2f}x")
-
-    def cmd_proj_ls(self, args: List[str]):
-        """List projections."""
-        if args and args[0] in ['-a', '--all']:
-            # List all available projections
-            print("Available projections:")
-            for name in sorted(PROJECTION_REGISTRY.keys()):
-                print(f"  {name}")
-            return
-
-        # List active projections for current dataset
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        projections = self.dataset_projections.get(self.current_dataset, [])
-
-        if not projections:
-            print(f"No active projections for '{self.current_dataset}'")
-        else:
-            print(f"Active projections for '{self.current_dataset}':")
-            for p in projections:
-                print(f"  {p}")
-
-    def cmd_proj_cat(self, args: List[str]):
-        """View projection details."""
         if not args:
-            print("Usage: proj cat <projection>")
-            print("\nAvailable projections:")
-            for name in sorted(PROJECTION_REGISTRY.keys()):
-                print(f"  {name}")
+            print("Usage: search <pattern> [-n limit] [-w window]")
             return
 
-        proj_name = args[0]
+        # Parse args
+        limit = 5
+        window = 60
+        pattern_parts = []
 
-        if proj_name not in PROJECTION_REGISTRY:
-            print(f"Projection '{proj_name}' not found")
-            print("\nAvailable projections:")
-            for name in sorted(PROJECTION_REGISTRY.keys()):
-                print(f"  {name}")
+        i = 0
+        while i < len(args):
+            if args[i] == '-n' and i + 1 < len(args):
+                limit = int(args[i + 1])
+                i += 2
+            elif args[i] == '-w' and i + 1 < len(args):
+                window = int(args[i + 1])
+                i += 2
+            else:
+                pattern_parts.append(args[i])
+                i += 1
+
+        pattern = ' '.join(pattern_parts)
+        pattern_bytes = pattern.encode('utf-8')
+
+        results = self.model.search(pattern_bytes)
+        total = len(results)
+
+        print(f"Pattern: '{pattern}'")
+        print(f"Found: {total:,} occurrences")
+
+        if total == 0:
             return
 
-        print(f"Projection: {proj_name}")
-        print("-" * 70)
-
-        # Get the projection function
-        proj_func = PROJECTION_REGISTRY[proj_name]
-
-        # Show docstring if available
-        if proj_func.__doc__:
-            print(f"Description: {proj_func.__doc__}")
-        else:
-            print("No description available")
-
-        # Show examples
-        print("\nExamples:")
-        test_inputs = [
-            "Hello World",
-            "THE QUICK BROWN FOX",
-            "python programming",
-            "  spaces  around  ",
-        ]
-
-        for test_input in test_inputs:
-            try:
-                result = proj_func(test_input)
-                print(f"  '{test_input}' → '{result}'")
-            except Exception as e:
-                print(f"  '{test_input}' → Error: {e}")
-
-        print("-" * 70)
-
-    def cmd_proj_rm(self, args: List[str]):
-        """Remove all projections from current dataset."""
-        if not self.current_dataset:
-            print("No dataset selected")
-            return
-
-        if self.current_dataset not in self.dataset_projections or not self.dataset_projections[self.current_dataset]:
-            print("No projections to remove")
-            return
-
-        # Clear projections
-        self.dataset_projections[self.current_dataset] = []
-
-        # Rebuild corpus without projections
-        if self.current_dataset in self.dataset_documents:
-            corpus = build_corpus_from_documents(
-                self.dataset_documents[self.current_dataset],
-                separator=b"\x00"
-            )
-            self.datasets[self.current_dataset] = Infinigram(
-                corpus,
-                max_length=self.max_length
-            )
-            print(f"✓ Removed all projections from '{self.current_dataset}'")
-            print(f"  Corpus size: {len(corpus)} bytes")
-
-    def cmd_info_OLD(self, args: List[str]):
-        """Show current dataset information."""
-        if not self.model:
-            print("No dataset selected.")
-            return
-
-        print(f"Dataset: {self.current_dataset}")
-        print(f"  Corpus size: {self.model.n} bytes")
-        num_docs = len(self.dataset_documents.get(self.current_dataset, []))
-        if num_docs > 0:
-            print(f"  Documents: {num_docs}")
-        print(f"  Vocabulary size: {self.model.vocab_size}")
-        print(f"  Max suffix length: {self.model.max_length or 'unlimited'}")
-        print(f"  Min count: {self.model.min_count}")
-
-    def cmd_stats_OLD(self, args: List[str]):
-        """Show corpus statistics."""
-        if not self.model:
-            print("No model loaded.")
-            return
-
-        corpus = self.model.corpus
-
-        # Byte distribution
-        byte_counts = {}
-        for b in corpus:
-            byte_counts[b] = byte_counts.get(b, 0) + 1
-
-        print("Corpus Statistics:")
-        print(f"  Total bytes: {len(corpus)}")
-        print(f"  Unique bytes: {len(byte_counts)}")
         print()
+        print(f"Showing {min(limit, total)} results (window={window}):")
+        print("-" * 70)
 
-        # Top 10 most frequent bytes
-        top_bytes = sorted(byte_counts.items(), key=lambda x: -x[1])[:10]
-        print("  Top 10 most frequent bytes:")
-        for byte_val, count in top_bytes:
-            char = chr(byte_val) if 32 <= byte_val < 127 else f"0x{byte_val:02X}"
-            pct = 100 * count / len(corpus)
-            print(f"    {byte_val:3d} ('{char}'): {count:5d} ({pct:5.2f}%)")
+        for i, pos in enumerate(results[:limit]):
+            if self.model._is_chunked:
+                chunk_idx, pos_in_chunk = pos
+                ctx = self.model.get_context(pos_in_chunk, window, chunk_idx)
+                loc = f"chunk {chunk_idx}, pos {pos_in_chunk:,}"
+            else:
+                ctx = self.model.get_context(pos, window)
+                loc = f"pos {pos:,}"
+
+            # Decode and highlight
+            ctx_text = ctx.decode('utf-8', errors='replace')
+            # Find pattern in context
+            pattern_start = ctx_text.find(pattern)
+            if pattern_start >= 0:
+                before = ctx_text[:pattern_start]
+                match = ctx_text[pattern_start:pattern_start+len(pattern)]
+                after = ctx_text[pattern_start+len(pattern):]
+                ctx_text = f"{before}[{match}]{after}"
+
+            print(f"[{i+1}] {loc}")
+            print(f"    ...{ctx_text}...")
+            print()
+
+    def cmd_context(self, args: List[str]):
+        """Show context at a position."""
+        if not self.model:
+            print("No model loaded. Use 'use <name>' first.")
+            return
+
+        if not args:
+            print("Usage: context <position> [-w window] [-c chunk]")
+            return
+
+        position = int(args[0])
+        window = 100
+        chunk_idx = None
+
+        i = 1
+        while i < len(args):
+            if args[i] == '-w' and i + 1 < len(args):
+                window = int(args[i + 1])
+                i += 2
+            elif args[i] == '-c' and i + 1 < len(args):
+                chunk_idx = int(args[i + 1])
+                i += 2
+            else:
+                i += 1
+
+        if self.model._is_chunked:
+            if chunk_idx is None:
+                print("Chunked model - use -c to specify chunk index")
+                return
+            ctx = self.model.get_context(position, window, chunk_idx)
+        else:
+            ctx = self.model.get_context(position, window)
+
+        print(f"Context at position {position}:")
+        print("-" * 70)
+        print(ctx.decode('utf-8', errors='replace'))
+        print("-" * 70)
+
+    # ========================================================================
+    # INFERENCE
+    # ========================================================================
 
     def cmd_predict(self, args: List[str]):
         """Predict next byte probabilities."""
         if not self.model:
-            print("No dataset selected. Use /dataset <name> or /add first.")
+            print("No model loaded. Use 'use <name>' first.")
             return
 
         if not args:
-            print("Usage: /predict <text> [--bytes]")
+            print("Usage: predict <text> [-n top_k] [-b]")
             return
 
-        # Parse arguments
-        show_bytes = '--bytes' in args
-        if show_bytes:
-            args = [a for a in args if a != '--bytes']
+        # Parse args
+        top_k = 10
+        show_bytes = False
+        text_parts = []
 
-        text = ' '.join(args)
-        context = text_to_bytes(text)
+        i = 0
+        while i < len(args):
+            if args[i] == '-n' and i + 1 < len(args):
+                top_k = int(args[i + 1])
+                i += 2
+            elif args[i] == '-b':
+                show_bytes = True
+                i += 1
+            else:
+                text_parts.append(args[i])
+                i += 1
 
-        # Get predictions
+        context = ' '.join(text_parts)
+
+        # Get weight function if set
+        weight_fn = None
         if self.weight_function:
+            weight_fn = get_weight_function(self.weight_function)
+
+        if weight_fn:
             probs = self.model.predict_weighted(
                 context,
                 min_length=self.min_length,
-                max_length=self.max_weight_length or len(context),
-                weight_fn=self.weight_function,
-                top_k=self.top_k,
+                max_length=self.max_length,
+                weight_fn=weight_fn,
+                top_k=top_k,
                 smoothing=self.smoothing
             )
         else:
-            probs = self.model.predict(context, top_k=self.top_k, smoothing=self.smoothing)
+            probs = self.model.predict(
+                context, top_k=top_k, smoothing=self.smoothing
+            )
 
-        # Apply temperature
-        if self.temperature != 1.0:
-            probs = self._apply_temperature(probs, self.temperature)
+        print(f"Context: '{context}'")
+        print(f"Predictions (top {top_k}):")
+        print("-" * 40)
 
-        # Display
-        print(f"Context: '{text}' ({len(context)} bytes)")
-        print(f"Top {min(self.top_k, len(probs))} predictions:")
-        print()
-
-        for byte_val, prob in sorted(probs.items(), key=lambda x: -x[1])[:20]:
+        for byte_val, prob in probs.items():
             if show_bytes:
-                print(f"  Byte {byte_val:3d} (0x{byte_val:02X}): {prob:.6f}")
+                display = f"0x{byte_val:02x}"
             else:
-                # Try to display as character
                 if 32 <= byte_val < 127:
-                    char = chr(byte_val)
-                    print(f"  '{char}' (byte {byte_val}): {prob:.6f}")
+                    display = f"'{chr(byte_val)}'"
                 else:
-                    print(f"  0x{byte_val:02X} (byte {byte_val}): {prob:.6f}")
+                    display = f"<0x{byte_val:02x}>"
+            print(f"  {display:12s} {prob:.4f} ({prob*100:.1f}%)")
 
     def cmd_complete(self, args: List[str]):
-        """Generate completion."""
+        """Generate text completion."""
         if not self.model:
-            print("No dataset selected. Use /dataset <name> or /add first.")
+            print("No model loaded. Use 'use <name>' first.")
             return
 
         if not args:
-            print("Usage: /complete <text> [--max N]")
+            print("Usage: complete <text> [-n max_tokens] [-t temperature]")
             return
 
-        # Parse arguments
-        max_bytes = 50  # Default
-        if '--max' in args:
-            idx = args.index('--max')
-            if idx + 1 < len(args):
-                try:
-                    max_bytes = int(args[idx + 1])
-                    args = args[:idx] + args[idx+2:]
-                except ValueError:
-                    print("Invalid --max value")
-                    return
+        # Parse args
+        max_tokens = 50
+        temperature = self.temperature
+        text_parts = []
 
-        text = ' '.join(args)
-        context = text_to_bytes(text)
+        i = 0
+        while i < len(args):
+            if args[i] == '-n' and i + 1 < len(args):
+                max_tokens = int(args[i + 1])
+                i += 2
+            elif args[i] == '-t' and i + 1 < len(args):
+                temperature = float(args[i + 1])
+                i += 2
+            else:
+                text_parts.append(args[i])
+                i += 1
 
-        print(f"Context: '{text}'")
-        print(f"Generating up to {max_bytes} bytes...")
-        print()
+        context = ' '.join(text_parts)
+        context_bytes = list(context.encode('utf-8'))
 
         # Generate completion
-        generated = list(context)  # Copy context
+        completion = []
+        current = context_bytes.copy()
 
-        for i in range(max_bytes):
-            # Get predictions
-            if self.weight_function:
+        weight_fn = None
+        if self.weight_function:
+            weight_fn = get_weight_function(self.weight_function)
+
+        for _ in range(max_tokens):
+            if weight_fn:
                 probs = self.model.predict_weighted(
-                    generated,
+                    current,
                     min_length=self.min_length,
-                    max_length=self.max_weight_length or len(generated),
-                    weight_fn=self.weight_function,
+                    max_length=self.max_length,
+                    weight_fn=weight_fn,
                     top_k=self.top_k,
                     smoothing=self.smoothing
                 )
             else:
-                probs = self.model.predict(generated, top_k=self.top_k, smoothing=self.smoothing)
+                probs = self.model.predict(
+                    current, top_k=self.top_k, smoothing=self.smoothing
+                )
 
             if not probs:
                 break
 
-            # Apply temperature
-            if self.temperature != 1.0:
-                probs = self._apply_temperature(probs, self.temperature)
-
-            # Sample next byte
-            next_byte = self._sample(probs)
-            generated.append(next_byte)
-
-            # Stop at NULL byte (end-of-document marker)
-            if next_byte == 0:
-                break
+            # Sample with temperature
+            next_byte = self._sample(probs, temperature)
+            completion.append(next_byte)
+            current.append(next_byte)
 
         # Decode and display
-        completion_bytes = generated[len(context):]
-        completion_text = bytes_to_text(completion_bytes)
+        completion_text = bytes(completion).decode('utf-8', errors='replace')
 
-        print(f"Generated: '{completion_text}'")
-        print(f"({len(completion_bytes)} bytes)")
+        print(f"Context: '{context}'")
+        print(f"Completion ({len(completion)} bytes, temp={temperature}):")
+        print("-" * 70)
+        print(context + completion_text)
+        print("-" * 70)
 
-    def cmd_set_temperature(self, args: List[str]):
-        """Set temperature."""
-        if not args:
-            print(f"Current temperature: {self.temperature}")
-            print("Usage: set temperature <value>")
-            print("  Higher values (>1.0) = more uniform distribution")
-            print("  Lower values (<1.0) = more peaked distribution")
+    def cmd_sample(self, args: List[str]):
+        """Sample multiple completions."""
+        if not self.model:
+            print("No model loaded. Use 'use <name>' first.")
             return
 
-        try:
-            temp = float(args[0])
-            if temp <= 0:
-                print("Temperature must be positive")
-                return
-            self.temperature = temp
-            print(f"✓ Temperature set to {temp}")
-        except ValueError:
-            print("Invalid temperature value")
-
-    def cmd_set_top_k(self, args: List[str]):
-        """Set top_k."""
         if not args:
-            print(f"Current top_k: {self.top_k}")
-            print("Usage: set top_k <n>")
+            print("Usage: sample <text> [-n samples] [-l length] [-t temp]")
             return
 
-        try:
-            k = int(args[0])
-            if k <= 0:
-                print("top_k must be positive")
-                return
-            self.top_k = k
-            print(f"✓ top_k set to {k}")
-        except ValueError:
-            print("Invalid top_k value")
+        # Parse args
+        num_samples = 5
+        length = 30
+        temperature = self.temperature
+        text_parts = []
 
-    def cmd_set_max_length(self, args: List[str]):
-        """Set max suffix length."""
-        if not args:
-            print(f"Current max_length: {self.max_length or 'unlimited'}")
-            print("Usage: set max_length <n> or set max_length none")
-            return
+        i = 0
+        while i < len(args):
+            if args[i] == '-n' and i + 1 < len(args):
+                num_samples = int(args[i + 1])
+                i += 2
+            elif args[i] == '-l' and i + 1 < len(args):
+                length = int(args[i + 1])
+                i += 2
+            elif args[i] == '-t' and i + 1 < len(args):
+                temperature = float(args[i + 1])
+                i += 2
+            else:
+                text_parts.append(args[i])
+                i += 1
 
-        if args[0].lower() == 'none':
-            self.max_length = None
-            print("✓ max_length set to unlimited")
-        else:
-            try:
-                length = int(args[0])
-                if length <= 0:
-                    print("max_length must be positive")
-                    return
-                self.max_length = length
-                print(f"✓ max_length set to {length}")
-            except ValueError:
-                print("Invalid max_length value")
+        context = ' '.join(text_parts)
+        context_bytes = list(context.encode('utf-8'))
 
-    def cmd_set_smoothing(self, args: List[str]):
-        """Set smoothing parameter."""
-        if not args:
-            print(f"Current smoothing: {self.smoothing}")
-            print("Usage: set smoothing <value>")
-            print("  0.0 = no smoothing (only observed data)")
-            print("  >0.0 = add-k smoothing for unseen bytes")
-            return
+        print(f"Context: '{context}'")
+        print(f"Sampling {num_samples} completions (length={length}, temp={temperature}):")
+        print("-" * 70)
 
-        try:
-            smooth = float(args[0])
-            if smooth < 0:
-                print("Smoothing must be non-negative")
-                return
-            self.smoothing = smooth
-            print(f"✓ Smoothing set to {smooth}")
-        except ValueError:
-            print("Invalid smoothing value")
+        for s in range(num_samples):
+            completion = []
+            current = context_bytes.copy()
 
-    def cmd_set_weight(self, args: List[str]):
-        """Set weight function."""
-        if not args:
-            current = "none" if not self.weight_function else "custom"
-            print(f"Current weight function: {current}")
-            print("Usage: set weight <function>")
-            print("  Options: none, linear, quadratic, exponential, sigmoid")
-            return
+            for _ in range(length):
+                probs = self.model.predict(
+                    current, top_k=self.top_k, smoothing=self.smoothing
+                )
+                if not probs:
+                    break
+                next_byte = self._sample(probs, temperature)
+                completion.append(next_byte)
+                current.append(next_byte)
 
-        func_name = args[0].lower()
+            completion_text = bytes(completion).decode('utf-8', errors='replace')
+            print(f"[{s+1}] {context}{completion_text}")
 
-        if func_name == 'none':
-            self.weight_function = None
-            print("✓ Disabled weighted prediction")
-        else:
-            try:
-                self.weight_function = get_weight_function(func_name)
-                print(f"✓ Weight function set to {func_name}")
-            except ValueError as e:
-                print(f"Error: {e}")
+        print("-" * 70)
+
+    def _sample(self, probs: Dict[int, float], temperature: float) -> int:
+        """Sample from probability distribution with temperature."""
+        if not probs:
+            return 0
+
+        if temperature == 0:
+            return max(probs.items(), key=lambda x: x[1])[0]
+
+        if temperature != 1.0:
+            tokens = list(probs.keys())
+            log_probs = [math.log(p + 1e-10) / temperature for p in probs.values()]
+            max_log = max(log_probs)
+            exp_probs = [math.exp(lp - max_log) for lp in log_probs]
+            total = sum(exp_probs)
+            probs = {t: p / total for t, p in zip(tokens, exp_probs)}
+
+        r = random.random()
+        cumulative = 0.0
+        for token, prob in probs.items():
+            cumulative += prob
+            if r < cumulative:
+                return token
+
+        return list(probs.keys())[-1]
+
+    # ========================================================================
+    # CONFIGURATION
+    # ========================================================================
 
     def cmd_config(self, args: List[str]):
         """Show current configuration."""
-        print("Current Configuration:")
-        print(f"  Temperature: {self.temperature}")
-        print(f"  Top-k: {self.top_k}")
-        print(f"  Max suffix length: {self.max_length or 'unlimited'}")
-        print(f"  Smoothing: {self.smoothing}")
-        weight_name = "none" if not self.weight_function else "custom"
-        print(f"  Weight function: {weight_name}")
-        print(f"  Weighted prediction min_length: {self.min_length}")
-        print(f"  Weighted prediction max_length: {self.max_weight_length or 'auto'}")
+        print("Configuration:")
+        print("-" * 40)
+        print(f"  temperature:    {self.temperature}")
+        print(f"  top_k:          {self.top_k}")
+        print(f"  max_length:     {self.max_length or 'unlimited'}")
+        print(f"  smoothing:      {self.smoothing}")
+        print(f"  weight:         {self.weight_function or 'none'}")
+        print(f"  min_length:     {self.min_length}")
+        print("-" * 40)
+        print(f"  models_dir:     {self.models_dir}")
+        if self.model_name:
+            print(f"  current model:  {self.model_name}")
 
-    def cmd_reset_OLD(self, args: List[str]):
-        """Delete current dataset."""
-        if not self.current_dataset:
-            print("No dataset selected.")
+    def cmd_set(self, args: List[str]):
+        """Set configuration value."""
+        if len(args) < 2:
+            print("Usage: set <parameter> <value>")
+            print("Parameters: temperature, top_k, max_length, smoothing, weight, min_length")
             return
 
-        name = self.current_dataset
-        del self.datasets[name]
-        self.current_dataset = None
+        param = args[0].lower()
+        value = args[1]
 
-        print(f"✓ Deleted dataset: {name}")
-
-        # Switch to first available dataset if any
-        if self.datasets:
-            self.current_dataset = list(self.datasets.keys())[0]
-            print(f"Switched to: {self.current_dataset}")
-
-    def cmd_quit(self, args: List[str]):
-        """Quit REPL."""
-        print("Goodbye!")
-        sys.exit(0)
-
-    def cmd_save(self, args: List[str]):
-        """Save dataset to disk."""
-        # Determine which dataset to save
-        if args:
-            dataset_name = args[0]
-            if dataset_name not in self.datasets:
-                print(f"Dataset '{dataset_name}' not found")
-                return
+        if param == 'temperature':
+            self.temperature = float(value)
+            print(f"temperature = {self.temperature}")
+        elif param == 'top_k':
+            self.top_k = int(value)
+            print(f"top_k = {self.top_k}")
+        elif param == 'max_length':
+            self.max_length = int(value) if value.lower() != 'none' else None
+            print(f"max_length = {self.max_length}")
+        elif param == 'smoothing':
+            self.smoothing = float(value)
+            print(f"smoothing = {self.smoothing}")
+        elif param == 'weight':
+            if value.lower() == 'none':
+                self.weight_function = None
+            else:
+                # Validate
+                get_weight_function(value)
+                self.weight_function = value
+            print(f"weight = {self.weight_function}")
+        elif param == 'min_length':
+            self.min_length = int(value)
+            print(f"min_length = {self.min_length}")
         else:
-            if not self.current_dataset:
-                print("No dataset selected. Use /save <name> or switch to a dataset first.")
-                return
-            dataset_name = self.current_dataset
-
-        # Create dataset directory
-        dataset_dir = self.storage_dir / dataset_name
-        dataset_dir.mkdir(parents=True, exist_ok=True)
-
-        # Save documents
-        documents_file = dataset_dir / "documents.jsonl"
-        with open(documents_file, 'w', encoding='utf-8') as f:
-            for doc in self.dataset_documents.get(dataset_name, []):
-                f.write(json.dumps({"text": doc}) + "\n")
-
-        # Save metadata
-        metadata = {
-            "name": dataset_name,
-            "projections": self.dataset_projections.get(dataset_name, []),
-            "config": self.dataset_config.get(dataset_name, {
-                "max_length": None,
-                "min_count": 1
-            }),
-            "num_documents": len(self.dataset_documents.get(dataset_name, [])),
-            "corpus_size": self.datasets[dataset_name].n if dataset_name in self.datasets else 0
-        }
-
-        metadata_file = dataset_dir / "metadata.json"
-        with open(metadata_file, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, indent=2)
-
-        print(f"✓ Saved dataset '{dataset_name}' to {dataset_dir}")
-        print(f"  Documents: {metadata['num_documents']}")
-        print(f"  Corpus size: {metadata['corpus_size']} bytes")
-        if metadata['projections']:
-            print(f"  Projections: {', '.join(metadata['projections'])}")
-
-    def cmd_load(self, args: List[str]):
-        """Load dataset from disk."""
-        if not args:
-            print("Usage: /load <dataset_name>")
-            return
-
-        dataset_name = args[0]
-        dataset_dir = self.storage_dir / dataset_name
-
-        if not dataset_dir.exists():
-            print(f"Dataset '{dataset_name}' not found in {self.storage_dir}")
-            return
-
-        # Load metadata
-        metadata_file = dataset_dir / "metadata.json"
-        if not metadata_file.exists():
-            print(f"Invalid dataset: missing metadata.json")
-            return
-
-        with open(metadata_file, 'r', encoding='utf-8') as f:
-            metadata = json.load(f)
-
-        # Load documents
-        documents_file = dataset_dir / "documents.jsonl"
-        if not documents_file.exists():
-            print(f"Invalid dataset: missing documents.jsonl")
-            return
-
-        documents = []
-        with open(documents_file, 'r', encoding='utf-8') as f:
-            for line in f:
-                doc_obj = json.loads(line.strip())
-                documents.append(doc_obj["text"])
-
-        # Restore dataset state
-        self.dataset_documents[dataset_name] = documents
-        self.dataset_projections[dataset_name] = metadata.get("projections", [])
-        self.dataset_config[dataset_name] = metadata.get("config", {
-            "max_length": None,
-            "min_count": 1
-        })
-
-        # Rebuild corpus with projections
-        config = self.dataset_config[dataset_name]
-        projections = self.dataset_projections[dataset_name]
-
-        if projections:
-            aug_functions = [PROJECTION_REGISTRY[name] for name in projections]
-            corpus = build_corpus_with_augmentation(
-                documents,
-                augmentations=aug_functions,
-                separator=b"\x00"
-            )
-        else:
-            corpus = build_corpus_from_documents(
-                documents,
-                separator=b"\x00"
-            )
-
-        # Create model
-        self.datasets[dataset_name] = Infinigram(
-            corpus,
-            max_length=config.get("max_length"),
-            min_count=config.get("min_count", 1)
-        )
-
-        # Switch to loaded dataset
-        self.current_dataset = dataset_name
-
-        print(f"✓ Loaded dataset '{dataset_name}'")
-        print(f"  Documents: {len(documents)}")
-        print(f"  Corpus size: {self.datasets[dataset_name].n} bytes")
-        if projections:
-            print(f"  Projections: {', '.join(projections)}")
-
-    def cmd_store_ls(self, args: List[str]):
-        """List saved datasets on disk."""
-        if not self.storage_dir.exists():
-            print("No saved datasets")
-            return
-
-        saved_datasets = []
-        for dataset_dir in self.storage_dir.iterdir():
-            if dataset_dir.is_dir():
-                metadata_file = dataset_dir / "metadata.json"
-                if metadata_file.exists():
-                    try:
-                        with open(metadata_file, 'r', encoding='utf-8') as f:
-                            metadata = json.load(f)
-                        saved_datasets.append((dataset_dir.name, metadata))
-                    except:
-                        continue
-
-        if not saved_datasets:
-            print("No saved datasets")
-            return
-
-        print(f"Saved datasets ({self.storage_dir}):")
-        for name, metadata in sorted(saved_datasets):
-            loaded = " [loaded]" if name in self.datasets else ""
-            print(f"  {name}{loaded}")
-            print(f"    Documents: {metadata.get('num_documents', 0)}")
-            print(f"    Corpus: {metadata.get('corpus_size', 0)} bytes")
-            if metadata.get('projections'):
-                print(f"    Projections: {', '.join(metadata['projections'])}")
-
-    def cmd_store_rm(self, args: List[str]):
-        """Delete saved dataset from disk."""
-        if not args:
-            print("Usage: store rm <dataset_name>")
-            return
-
-        dataset_name = args[0]
-        dataset_dir = self.storage_dir / dataset_name
-
-        if not dataset_dir.exists():
-            print(f"Dataset '{dataset_name}' not found in {self.storage_dir}")
-            return
-
-        # Delete directory
-        import shutil
-        shutil.rmtree(dataset_dir)
-
-        print(f"✓ Deleted saved dataset '{dataset_name}'")
-
-        # Also remove from memory if loaded
-        if dataset_name in self.datasets:
-            del self.datasets[dataset_name]
-            if self.current_dataset == dataset_name:
-                self.current_dataset = None
-                if self.datasets:
-                    self.current_dataset = list(self.datasets.keys())[0]
-                    print(f"Switched to: {self.current_dataset}")
-            print(f"  Also removed from memory")
+            print(f"Unknown parameter: {param}")
+            print("Parameters: temperature, top_k, max_length, smoothing, weight, min_length")
 
     # ========================================================================
-    # HELPER METHODS
+    # UTILITIES
     # ========================================================================
 
-    def _apply_temperature(self, probs: Dict[int, float], temperature: float) -> Dict[int, float]:
-        """Apply temperature scaling to probabilities."""
-        # Convert to log space
-        log_probs = {k: np.log(v) if v > 0 else -np.inf for k, v in probs.items()}
-
-        # Scale by temperature
-        scaled_log_probs = {k: v / temperature for k, v in log_probs.items()}
-
-        # Convert back to probabilities
-        max_log = max(scaled_log_probs.values())
-        exp_probs = {k: np.exp(v - max_log) for k, v in scaled_log_probs.items()}
-
-        # Normalize
-        total = sum(exp_probs.values())
-        return {k: v / total for k, v in exp_probs.items()}
-
-    def _sample(self, probs: Dict[int, float]) -> int:
-        """Sample a byte from probability distribution."""
-        bytes_list = list(probs.keys())
-        probs_list = [probs[b] for b in bytes_list]
-
-        # Normalize (in case of floating point errors)
-        total = sum(probs_list)
-        probs_list = [p / total for p in probs_list]
-
-        # Sample
-        return np.random.choice(bytes_list, p=probs_list)
+    def _format_size(self, size: int) -> str:
+        """Format byte size for display."""
+        if size >= 1_000_000_000:
+            return f"{size / 1_000_000_000:.2f} GB"
+        elif size >= 1_000_000:
+            return f"{size / 1_000_000:.2f} MB"
+        elif size >= 1_000:
+            return f"{size / 1_000:.2f} KB"
+        else:
+            return f"{size} bytes"
 
 
 def main():
-    """Run the REPL."""
-    repl = InfinigramREPL()
+    """Entry point for REPL."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Infinigram Interactive REPL")
+    parser.add_argument('--models-dir', type=Path, help="Models directory")
+    parser.add_argument('--use', type=str, help="Model to load on startup")
+
+    args = parser.parse_args()
+
+    repl = InfinigramREPL(models_dir=args.models_dir)
+
+    if args.use:
+        repl.cmd_use([args.use])
+
     repl.run()
 
 

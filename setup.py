@@ -11,7 +11,7 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 
 setup(
     name="infinigram",
-    version="0.2.0",
+    version="0.4.0",
     author="Alex Towell",
     author_email="lex@metafunctor.com",
     description="Variable-length n-gram language models using suffix arrays",
@@ -40,6 +40,7 @@ setup(
         "uvicorn[standard]>=0.24.0",
         "pydantic>=2.0.0",
         "prompt_toolkit>=3.0.0",
+        "pydivsufsort>=0.0.10",
     ],
     extras_require={
         "dev": [
@@ -53,10 +54,13 @@ setup(
             "sphinx>=4.0",
             "sphinx-rtd-theme>=0.5",
         ],
+        "datasets": [
+            "datasets>=2.0.0",
+        ],
     },
     entry_points={
         "console_scripts": [
-            "infinigram-serve=infinigram.server.api:start_server",
+            "infinigram-serve=infinigram.server.api:main",
             "infinigram-repl=infinigram.repl:main",
         ],
     },

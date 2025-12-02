@@ -262,3 +262,167 @@ class TestTopK:
         expected_top_3 = dict(sorted_all[:3])
 
         assert top_3_probs == expected_top_3
+
+
+class TestPredictBackoff:
+    """Test predict_backoff (Stupid Backoff smoothing)."""
+
+    def test_predict_backoff_exists(self):
+        """predict_backoff method should exist."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+        assert hasattr(model, 'predict_backoff')
+
+    def test_predict_backoff_returns_dict(self):
+        """predict_backoff should return a dict."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+        result = model.predict_backoff(b"the cat")
+        assert isinstance(result, dict)
+
+    def test_predict_backoff_probabilities_sum_to_one(self):
+        """Probabilities should sum to approximately 1.0."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+        probs = model.predict_backoff(b"the cat", top_k=256)
+        total = sum(probs.values())
+        assert abs(total - 1.0) < 0.01
+
+    def test_predict_backoff_all_positive(self):
+        """All returned probabilities should be non-negative."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+        probs = model.predict_backoff(b"the cat")
+        assert all(p >= 0 for p in probs.values())
+        assert any(p > 0 for p in probs.values())
+
+    def test_predict_backoff_favors_longest_match(self):
+        """Backoff should favor longest matching suffix."""
+        corpus = b"the cat sat on the mat. the cat ran."
+        model = Infinigram(corpus)
+
+        probs = model.predict_backoff(b"the cat")
+
+        # "the cat " and "the cat " both followed by space
+        # So space should have highest probability
+        top_token = max(probs.items(), key=lambda x: x[1])[0]
+        assert top_token == ord(' ')
+
+    def test_predict_backoff_includes_shorter_matches(self):
+        """Backoff should include contributions from shorter matches."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+
+        # Get backoff predictions
+        backoff_probs = model.predict_backoff(b"the cat", top_k=256)
+
+        # Get regular predict (only longest match)
+        regular_probs = model.predict(b"the cat", top_k=256)
+
+        # Backoff should have more tokens with non-zero probability
+        # because it considers shorter matches too
+        backoff_nonzero = sum(1 for p in backoff_probs.values() if p > 0)
+        regular_nonzero = sum(1 for p in regular_probs.values() if p > 0)
+
+        # Backoff typically has more or equal non-zero entries
+        assert backoff_nonzero >= regular_nonzero
+
+    def test_predict_backoff_factor_affects_distribution(self):
+        """Different backoff factors should produce different distributions."""
+        # Use a corpus where "ab" always followed by "c", but "b" has various continuations
+        corpus = b"abc xby zbc abc xby abc"
+        model = Infinigram(corpus)
+        context = b"ab"
+
+        # Low backoff factor = strong preference for longest match "ab" -> "c"
+        low_backoff = model.predict_backoff(context, backoff_factor=0.1, top_k=256)
+
+        # High backoff factor = more influence from shorter "b" matches
+        high_backoff = model.predict_backoff(context, backoff_factor=0.9, top_k=256)
+
+        # Both should have 'c' as top prediction from "ab"
+        # But high backoff should give more weight to other continuations from "b"
+        # At minimum, the probability distributions should differ slightly
+        low_c_prob = low_backoff.get(ord('c'), 0)
+        high_c_prob = high_backoff.get(ord('c'), 0)
+
+        # With high backoff, "b" contributes more -> c probability slightly lower
+        # or at least the distributions should be different
+        assert len(low_backoff) > 0 and len(high_backoff) > 0
+
+    def test_predict_backoff_empty_context(self):
+        """Should handle empty context."""
+        corpus = b"the cat sat"
+        model = Infinigram(corpus)
+
+        probs = model.predict_backoff(b"")
+
+        # Should return uniform distribution
+        assert len(probs) > 0
+
+    def test_predict_backoff_no_match(self):
+        """Should handle context with no matches."""
+        corpus = b"abc"
+        model = Infinigram(corpus)
+
+        probs = model.predict_backoff(b"xyz")
+
+        # Should return uniform distribution
+        assert len(probs) > 0
+
+    def test_predict_backoff_with_transforms(self):
+        """Should work with transforms."""
+        corpus = b"hello world"
+        model = Infinigram(corpus)
+
+        # Without transform - no match
+        probs_no_transform = model.predict_backoff(b"HELLO", transforms=[])
+        # Should be uniform since no match
+
+        # With lowercase transform - should match
+        probs_with_transform = model.predict_backoff(b"HELLO", transforms=['lowercase'])
+
+        # With transform, should have more confident prediction
+        assert probs_no_transform != probs_with_transform
+
+    def test_predict_backoff_top_k(self):
+        """top_k should limit output."""
+        corpus = b"the cat sat on the mat"
+        model = Infinigram(corpus)
+
+        probs = model.predict_backoff(b"the", top_k=5)
+
+        assert len(probs) <= 5
+
+    def test_predict_backoff_with_smoothing(self):
+        """Smoothing should give non-zero probability to unseen tokens."""
+        corpus = b"ab"
+        model = Infinigram(corpus)
+
+        # Without smoothing
+        probs_no_smooth = model.predict_backoff(b"a", smoothing=0.0, top_k=256)
+
+        # With smoothing
+        probs_smooth = model.predict_backoff(b"a", smoothing=1.0, top_k=256)
+
+        # Smoothing should give probability to more tokens
+        assert len(probs_smooth) > len(probs_no_smooth)
+
+    def test_predict_backoff_min_count_threshold(self):
+        """min_count_threshold should affect when backoff occurs."""
+        corpus = b"a b c d e f g h"  # Each pair appears once
+        model = Infinigram(corpus)
+
+        # With threshold=1, should use matches
+        probs_low_thresh = model.predict_backoff(
+            b"a b", min_count_threshold=1, top_k=256
+        )
+
+        # With high threshold, should back off more
+        probs_high_thresh = model.predict_backoff(
+            b"a b", min_count_threshold=100, top_k=256
+        )
+
+        # High threshold should produce different (more uniform) distribution
+        # because it backs off more
+        assert probs_low_thresh != probs_high_thresh

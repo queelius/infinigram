@@ -5,7 +5,6 @@ Tests for evaluation framework.
 
 import pytest
 from infinigram.infinigram import Infinigram
-from infinigram.recursive import RecursiveInfinigram, CaseNormalizer
 from infinigram.evaluation import (
     Evaluator,
     BenchmarkSuite,
@@ -194,16 +193,13 @@ class TestBenchmarkSuite:
         """Test model comparison."""
         corpus = b"the quick brown fox jumps over the lazy dog"
 
-        # Create models
+        # Create models with different configurations
         vanilla = Infinigram(corpus)
-        recursive = RecursiveInfinigram(
-            corpus,
-            transformers=[CaseNormalizer()]
-        )
+        with_transforms = Infinigram(corpus, default_transforms=['lowercase'])
 
         models = {
             "Vanilla": vanilla,
-            "Recursive": recursive,
+            "WithTransforms": with_transforms,
         }
 
         # Create test data
@@ -226,7 +222,7 @@ class TestBenchmarkSuite:
 
         # Check structure
         assert "Vanilla" in results
-        assert "Recursive" in results
+        assert "WithTransforms" in results
         assert "In-Dist" in results["Vanilla"]
         assert "OOD-Case" in results["Vanilla"]
 
@@ -424,7 +420,7 @@ class TestBenchmarkSuiteVerbose:
 
         models = {
             "Vanilla": Infinigram(corpus),
-            "Recursive": RecursiveInfinigram(corpus),
+            "WithTransforms": Infinigram(corpus, default_transforms=['lowercase']),
         }
 
         suite = BenchmarkSuite(corpus)
@@ -443,7 +439,7 @@ class TestBenchmarkSuiteVerbose:
         )
 
         assert "Vanilla" in results
-        assert "Recursive" in results
+        assert "WithTransforms" in results
 
 
 if __name__ == "__main__":

@@ -17,8 +17,8 @@ Infinigram provides an OpenAI-compatible REST API for corpus-based language mode
 ### 1. Start the Server
 
 ```bash
-# Option 1: Run example server with demo models
-python examples/start_server.py
+# Option 1: Use the module directly
+python -m infinigram.server.api
 
 # Option 2: Start server programmatically
 from infinigram.server.api import app, model_manager

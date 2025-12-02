@@ -6,7 +6,9 @@ Provides helpers for building corpora from documents, handling separators,
 and applying augmentations.
 """
 
-from typing import List, Union, Callable, Optional
+from typing import List, Union, Callable, Optional, Iterator, Any
+from pathlib import Path
+import json
 
 
 def build_corpus_from_documents(
@@ -181,3 +183,197 @@ def validate_byte_sequence(byte_sequence: List[int]) -> None:
             f"Sequence contains {len(invalid)} invalid byte values: "
             f"{invalid[:10]}{'...' if len(invalid) > 10 else ''}"
         )
+
+
+# =============================================================================
+# Large Dataset Loading Utilities
+# =============================================================================
+
+def load_text_file(path: Union[str, Path], encoding: str = 'utf-8') -> str:
+    """
+    Load text from a file.
+
+    Args:
+        path: Path to text file
+        encoding: Text encoding (default: 'utf-8')
+
+    Returns:
+        File contents as string
+    """
+    with open(path, 'r', encoding=encoding) as f:
+        return f.read()
+
+
+def iter_jsonl(
+    path: Union[str, Path],
+    text_field: str = 'text',
+    encoding: str = 'utf-8'
+) -> Iterator[str]:
+    """
+    Iterate over text documents in a JSONL file.
+
+    Args:
+        path: Path to JSONL file
+        text_field: Field name containing text (default: 'text')
+        encoding: Text encoding (default: 'utf-8')
+
+    Yields:
+        Text content from each line
+
+    Example:
+        >>> for doc in iter_jsonl("corpus.jsonl"):
+        ...     print(len(doc))
+    """
+    with open(path, 'r', encoding=encoding) as f:
+        for line in f:
+            if line.strip():
+                obj = json.loads(line)
+                if text_field in obj:
+                    yield obj[text_field]
+
+
+def build_corpus_from_jsonl(
+    path: Union[str, Path],
+    text_field: str = 'text',
+    separator: bytes = b"\n\n",
+    max_documents: Optional[int] = None,
+    encoding: str = 'utf-8'
+) -> List[int]:
+    """
+    Build corpus from a JSONL file.
+
+    Args:
+        path: Path to JSONL file
+        text_field: Field name containing text (default: 'text')
+        separator: Byte sequence between documents (default: b"\\n\\n")
+        max_documents: Maximum documents to load (None = all)
+        encoding: Text encoding (default: 'utf-8')
+
+    Returns:
+        Byte corpus as List[int]
+
+    Example:
+        >>> corpus = build_corpus_from_jsonl("wiki.jsonl", max_documents=1000)
+        >>> model = Infinigram(corpus)
+    """
+    documents = []
+    for i, text in enumerate(iter_jsonl(path, text_field, encoding)):
+        if max_documents is not None and i >= max_documents:
+            break
+        documents.append(text)
+
+    return build_corpus_from_documents(documents, separator=separator, encoding=encoding)
+
+
+def load_huggingface_dataset(
+    dataset_name: str,
+    config: Optional[str] = None,
+    split: str = 'train',
+    text_field: str = 'text',
+    max_documents: Optional[int] = None,
+    separator: bytes = b"\n\n",
+    streaming: bool = True,
+    trust_remote_code: bool = False
+) -> List[int]:
+    """
+    Load corpus from a HuggingFace dataset.
+
+    Requires the `datasets` library: pip install datasets
+
+    Args:
+        dataset_name: HuggingFace dataset name (e.g., 'wikitext', 'bookcorpus')
+        config: Dataset configuration name (e.g., 'wikitext-2-raw-v1')
+        split: Dataset split (default: 'train')
+        text_field: Field containing text (default: 'text')
+        max_documents: Maximum documents to load (None = all, use with caution!)
+        separator: Byte sequence between documents (default: b"\\n\\n")
+        streaming: Use streaming mode to avoid downloading entire dataset
+        trust_remote_code: Allow running custom code from the dataset
+
+    Returns:
+        Byte corpus as List[int]
+
+    Example:
+        >>> # Load WikiText-103 (first 10k documents)
+        >>> corpus = load_huggingface_dataset(
+        ...     "wikitext",
+        ...     config="wikitext-103-raw-v1",
+        ...     split="train",
+        ...     text_field="text",
+        ...     max_documents=10000
+        ... )
+        >>> model = Infinigram(corpus)
+
+        >>> # Load WikiText-2 (smaller, for testing)
+        >>> corpus = load_huggingface_dataset(
+        ...     "wikitext",
+        ...     config="wikitext-2-raw-v1",
+        ...     split="train",
+        ...     max_documents=1000
+        ... )
+    """
+    try:
+        from datasets import load_dataset
+    except ImportError:
+        raise ImportError(
+            "HuggingFace datasets library required. Install with: pip install datasets"
+        )
+
+    config_str = f"/{config}" if config else ""
+    print(f"Loading {dataset_name}{config_str} ({split})...")
+
+    # Load dataset (streaming to avoid memory issues)
+    kwargs = {
+        'split': split,
+        'streaming': streaming,
+        'trust_remote_code': trust_remote_code,
+    }
+
+    if streaming:
+        dataset = load_dataset(dataset_name, config, **kwargs)
+    else:
+        dataset = load_dataset(dataset_name, config, **kwargs)
+
+    documents = []
+    for i, example in enumerate(dataset):
+        if max_documents is not None and i >= max_documents:
+            break
+
+        text = example.get(text_field, '')
+        if text and text.strip():
+            documents.append(text)
+
+        # Progress indicator
+        if (i + 1) % 10000 == 0:
+            print(f"  Loaded {i + 1} documents...")
+
+    print(f"Building corpus from {len(documents)} documents...")
+    corpus = build_corpus_from_documents(documents, separator=separator)
+    print(f"Corpus size: {len(corpus):,} bytes ({len(corpus) / 1_000_000:.1f} MB)")
+
+    return corpus
+
+
+def save_corpus_to_jsonl(
+    documents: List[str],
+    path: Union[str, Path],
+    text_field: str = 'text',
+    encoding: str = 'utf-8'
+) -> None:
+    """
+    Save documents to a JSONL file.
+
+    Args:
+        documents: List of text documents
+        path: Output path
+        text_field: Field name for text (default: 'text')
+        encoding: Text encoding (default: 'utf-8')
+
+    Example:
+        >>> docs = ["Document 1", "Document 2"]
+        >>> save_corpus_to_jsonl(docs, "corpus.jsonl")
+    """
+    with open(path, 'w', encoding=encoding) as f:
+        for doc in documents:
+            obj = {text_field: doc}
+            f.write(json.dumps(obj) + '\n')

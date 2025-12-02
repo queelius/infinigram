@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Transformation scoring for RecursiveInfinigram.
+Transformation scoring for Infinigram.
 
 Provides sophisticated scoring for weighted combination of predictions
-from multiple transformed contexts.
+from multiple transformed contexts. Used by predict_search() when performing
+beam search over query transforms.
 """
 
 from typing import List, Dict, Tuple

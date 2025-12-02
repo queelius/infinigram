@@ -52,18 +52,16 @@ nav:
   - User Guides:
     - Loading Datasets: guides/LOADING_DATASETS.md
     - Benchmarks & Performance: guides/BENCHMARKS.md
+    - REPL Guide: REPL_GUIDE.md
+    - REST API: REST_API.md
 
   - Features:
     - Transformation Scoring: features/SCORING_AND_EVALUATION.md
-    - WordNet Integration: features/WORDNET_INTEGRATION.md
-    - Corpus-Guided Transformations: features/CORPUS_GUIDED_TRANSFORMATIONS.md
 
   - Development:
     - Test Strategy: development/TEST_STRATEGY_REVIEW.md
     - Test Summary: development/TEST_REVIEW_SUMMARY.md
     - Priority Tests: development/PRIORITY_TESTS_TO_ADD.md
-    - REPL Guide: REPL_GUIDE.md
-    - REST API: REST_API.md
     - Phase 1 Plan: PHASE1_PLAN.md
 
 plugins:

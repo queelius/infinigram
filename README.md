@@ -287,7 +287,6 @@ Test coverage:
 
 - [API Reference](docs/API.md) - Complete API documentation
 - [Design Document](docs/DESIGN.md) - Architecture and implementation details
-- [Examples](examples/) - Usage examples and demos
 - [Benchmarks](docs/BENCHMARKS.md) - Performance analysis
 
 ## 🔬 Use Cases

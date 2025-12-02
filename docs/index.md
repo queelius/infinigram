@@ -14,22 +14,18 @@ Unlike traditional neural language models or fixed-order n-grams, Infinigram:
 
 ## Key Features
 
-### RecursiveInfinigram
-Advanced variant that handles out-of-distribution (OOD) data through transformation-based context expansion:
+### Runtime Query Transforms
+Handle out-of-distribution (OOD) data through runtime query transformations:
 
-- **Case normalization**: Handle case variations
-- **Typo correction**: Edit distance-based corrections
-- **Semantic synonyms**: WordNet-based synonym matching
-- **Weighted prediction combining**: Multi-factor scoring system
+- **Case normalization**: `lowercase`, `uppercase`, `casefold`
+- **Whitespace normalization**: `strip`, `normalize_whitespace`
+- **Sequential composition**: Apply multiple transforms in order
+- **Beam search**: Explore transform combinations with `predict_search()`
 
-### Performance
-
-On OOD benchmarks, RecursiveInfinigram demonstrates:
-
-- **+22% accuracy** on case variations
-- **+6% accuracy** on typos
-- **+20.5% accuracy** on combined challenges
-- **Up to 40% perplexity reduction**
+### Future OOD Features (Planned)
+The following features are planned but deferred due to runtime performance concerns:
+- **Typo correction**: Edit distance-based corrections (requires fuzzy suffix arrays)
+- **Semantic synonyms**: WordNet-based synonym matching (requires embedding integration)
 
 ## Quick Start
 
@@ -46,17 +42,23 @@ probs = model.predict(context)
 print(probs)  # {115: 0.657, 97: 0.330, ...}  # 's' (sat), 'a' (at)
 ```
 
-### With RecursiveInfinigram
+### With Runtime Transforms
 
 ```python
-from infinigram.recursive import RecursiveInfinigram
+from infinigram import Infinigram
 
-# Handles OOD data (uppercase, typos, synonyms)
-model = RecursiveInfinigram(corpus)
+# Set default transforms at model creation
+model = Infinigram(corpus, default_transforms=['lowercase'])
 
-# Works with variations
+# Handles case variations automatically
 context = b"The Cat"  # Uppercase
-probs = model.predict(context, max_depth=2)
+probs = model.predict(context)
+
+# Or specify transforms per-call
+probs = model.predict(b"THE CAT", transforms=['lowercase', 'strip'])
+
+# Beam search over transform combinations
+probs = model.predict_search(context, search=['lowercase', 'casefold'])
 ```
 
 ## Documentation Sections
@@ -67,8 +69,6 @@ probs = model.predict(context, max_depth=2)
 
 ### Features
 - **[Transformation Scoring](features/SCORING_AND_EVALUATION.md)**: Multi-factor scoring system for weighted predictions
-- **[WordNet Integration](features/WORDNET_INTEGRATION.md)**: Semantic synonym detection
-- **[Corpus-Guided Transformations](features/CORPUS_GUIDED_TRANSFORMATIONS.md)**: Generate transformations from corpus
 
 ### Development
 - **[Test Strategy](development/TEST_STRATEGY_REVIEW.md)**: TDD strategy and coverage analysis

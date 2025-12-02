@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-Evaluation framework for Infinigram and RecursiveInfinigram.
+Evaluation framework for Infinigram.
 
 Provides tools to benchmark and compare model performance on both
 in-distribution and out-of-distribution (OOD) data.
+
+The Infinigram class supports runtime query transforms (lowercase, casefold,
+strip, normalize_whitespace) and beam search over transform combinations,
+enabling OOD generalization without a separate class.
 """
 
 from typing import List, Dict, Tuple, Optional, Any
@@ -11,7 +15,6 @@ from dataclasses import dataclass
 import math
 import time
 from infinigram.infinigram import Infinigram
-from infinigram.recursive import RecursiveInfinigram
 
 
 @dataclass
@@ -58,7 +61,8 @@ class Evaluator:
     """
     Evaluate Infinigram models on test data.
 
-    Supports both vanilla Infinigram and RecursiveInfinigram.
+    Works with any model that has a predict(context, top_k) method.
+    Use transforms parameter or search parameter on Infinigram for OOD scenarios.
     """
 
     def __init__(self, model, model_name: str = "Unknown"):
@@ -66,7 +70,7 @@ class Evaluator:
         Initialize evaluator.
 
         Args:
-            model: Infinigram or RecursiveInfinigram instance
+            model: Infinigram instance (or any model with predict method)
             model_name: Name for logging/reporting
         """
         self.model = model
