@@ -14,7 +14,7 @@
       
       
       
-        <link rel="next" href="guides/LOADING_DATASETS/">
+        <link rel="next" href="ARCHITECTURE/">
       
       
       <link rel="icon" href="assets/images/favicon.png">
@@ -244,7 +244,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="ARCHITECTURE.md" class="md-tabs__link">
+      <a href="ARCHITECTURE/" class="md-tabs__link">
         
   
   
@@ -438,18 +438,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#recursiveinfinigram" class="md-nav__link">
+  <a href="#runtime-query-transforms" class="md-nav__link">
     <span class="md-ellipsis">
-      RecursiveInfinigram
+      Runtime Query Transforms
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#performance" class="md-nav__link">
+  <a href="#future-ood-features-planned" class="md-nav__link">
     <span class="md-ellipsis">
-      Performance
+      Future OOD Features (Planned)
     </span>
   </a>
   
@@ -471,9 +471,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#with-recursiveinfinigram" class="md-nav__link">
+  <a href="#with-runtime-transforms" class="md-nav__link">
     <span class="md-ellipsis">
-      With RecursiveInfinigram
+      With Runtime Transforms
     </span>
   </a>
   
@@ -646,7 +646,7 @@
   
   
     <li class="md-nav__item">
-      <a href="ARCHITECTURE.md" class="md-nav__link">
+      <a href="ARCHITECTURE/" class="md-nav__link">
         
   
   
@@ -752,6 +752,52 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="REPL_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    REPL Guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="REST_API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    REST API
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -817,52 +863,6 @@
   
   <span class="md-ellipsis">
     Transformation Scoring
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="features/WORDNET_INTEGRATION/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    WordNet Integration
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="features/CORPUS_GUIDED_TRANSFORMATIONS/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Corpus-Guided Transformations
     
   </span>
   
@@ -1001,52 +1001,6 @@
   
   
     <li class="md-nav__item">
-      <a href="REPL_GUIDE/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    REPL Guide
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="REST_API/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    REST API
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="PHASE1_PLAN/" class="md-nav__link">
         
   
@@ -1116,18 +1070,18 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#recursiveinfinigram" class="md-nav__link">
+  <a href="#runtime-query-transforms" class="md-nav__link">
     <span class="md-ellipsis">
-      RecursiveInfinigram
+      Runtime Query Transforms
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#performance" class="md-nav__link">
+  <a href="#future-ood-features-planned" class="md-nav__link">
     <span class="md-ellipsis">
-      Performance
+      Future OOD Features (Planned)
     </span>
   </a>
   
@@ -1149,9 +1103,9 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#with-recursiveinfinigram" class="md-nav__link">
+  <a href="#with-runtime-transforms" class="md-nav__link">
     <span class="md-ellipsis">
-      With RecursiveInfinigram
+      With Runtime Transforms
     </span>
   </a>
   
@@ -1340,22 +1294,18 @@
 <li>✅ <strong>Enables LLM grounding</strong>: Can be mixed with neural LM probabilities for domain adaptation</li>
 </ul>
 <h2 id="key-features">Key Features<a class="headerlink" href="#key-features" title="Permanent link">&para;</a></h2>
-<h3 id="recursiveinfinigram">RecursiveInfinigram<a class="headerlink" href="#recursiveinfinigram" title="Permanent link">&para;</a></h3>
-<p>Advanced variant that handles out-of-distribution (OOD) data through transformation-based context expansion:</p>
+<h3 id="runtime-query-transforms">Runtime Query Transforms<a class="headerlink" href="#runtime-query-transforms" title="Permanent link">&para;</a></h3>
+<p>Handle out-of-distribution (OOD) data through runtime query transformations:</p>
 <ul>
-<li><strong>Case normalization</strong>: Handle case variations</li>
-<li><strong>Typo correction</strong>: Edit distance-based corrections</li>
-<li><strong>Semantic synonyms</strong>: WordNet-based synonym matching</li>
-<li><strong>Weighted prediction combining</strong>: Multi-factor scoring system</li>
+<li><strong>Case normalization</strong>: <code>lowercase</code>, <code>uppercase</code>, <code>casefold</code></li>
+<li><strong>Whitespace normalization</strong>: <code>strip</code>, <code>normalize_whitespace</code></li>
+<li><strong>Sequential composition</strong>: Apply multiple transforms in order</li>
+<li><strong>Beam search</strong>: Explore transform combinations with <code>predict_search()</code></li>
 </ul>
-<h3 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h3>
-<p>On OOD benchmarks, RecursiveInfinigram demonstrates:</p>
-<ul>
-<li><strong>+22% accuracy</strong> on case variations</li>
-<li><strong>+6% accuracy</strong> on typos</li>
-<li><strong>+20.5% accuracy</strong> on combined challenges</li>
-<li><strong>Up to 40% perplexity reduction</strong></li>
-</ul>
+<h3 id="future-ood-features-planned">Future OOD Features (Planned)<a class="headerlink" href="#future-ood-features-planned" title="Permanent link">&para;</a></h3>
+<p>The following features are planned but deferred due to runtime performance concerns:
+- <strong>Typo correction</strong>: Edit distance-based corrections (requires fuzzy suffix arrays)
+- <strong>Semantic synonyms</strong>: WordNet-based synonym matching (requires embedding integration)</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">infinigram</span><span class="w"> </span><span class="kn">import</span> <span class="n">Infinigram</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
@@ -1368,15 +1318,21 @@
 <a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
 <a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="nb">print</span><span class="p">(</span><span class="n">probs</span><span class="p">)</span>  <span class="c1"># {115: 0.657, 97: 0.330, ...}  # &#39;s&#39; (sat), &#39;a&#39; (at)</span>
 </code></pre></div>
-<h3 id="with-recursiveinfinigram">With RecursiveInfinigram<a class="headerlink" href="#with-recursiveinfinigram" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">infinigram.recursive</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecursiveInfinigram</span>
+<h3 id="with-runtime-transforms">With Runtime Transforms<a class="headerlink" href="#with-runtime-transforms" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">infinigram</span><span class="w"> </span><span class="kn">import</span> <span class="n">Infinigram</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Handles OOD data (uppercase, typos, synonyms)</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">RecursiveInfinigram</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Set default transforms at model creation</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="n">model</span> <span class="o">=</span> <span class="n">Infinigram</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">default_transforms</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lowercase&#39;</span><span class="p">])</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Works with variations</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Handles case variations automatically</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">context</span> <span class="o">=</span> <span class="sa">b</span><span class="s2">&quot;The Cat&quot;</span>  <span class="c1"># Uppercase</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">max_depth</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Or specify transforms per-call</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;THE CAT&quot;</span><span class="p">,</span> <span class="n">transforms</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lowercase&#39;</span><span class="p">,</span> <span class="s1">&#39;strip&#39;</span><span class="p">])</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Beam search over transform combinations</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_search</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lowercase&#39;</span><span class="p">,</span> <span class="s1">&#39;casefold&#39;</span><span class="p">])</span>
 </code></pre></div>
 <h2 id="documentation-sections">Documentation Sections<a class="headerlink" href="#documentation-sections" title="Permanent link">&para;</a></h2>
 <h3 id="user-guides">User Guides<a class="headerlink" href="#user-guides" title="Permanent link">&para;</a></h3>
@@ -1387,8 +1343,6 @@
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong><a href="features/SCORING_AND_EVALUATION/">Transformation Scoring</a></strong>: Multi-factor scoring system for weighted predictions</li>
-<li><strong><a href="features/WORDNET_INTEGRATION/">WordNet Integration</a></strong>: Semantic synonym detection</li>
-<li><strong><a href="features/CORPUS_GUIDED_TRANSFORMATIONS/">Corpus-Guided Transformations</a></strong>: Generate transformations from corpus</li>
 </ul>
 <h3 id="development">Development<a class="headerlink" href="#development" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1426,7 +1380,7 @@
 <h3 id="4-zero-shot-domain-adaptation">4. Zero-Shot Domain Adaptation<a class="headerlink" href="#4-zero-shot-domain-adaptation" title="Permanent link">&para;</a></h3>
 <p>No training required - just point at a corpus.</p>
 <h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<p>See <a href="ARCHITECTURE.md">Architecture</a> for detailed system design.</p>
+<p>See <a href="ARCHITECTURE/">Architecture</a> for detailed system design.</p>
 <h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h2>
 <p>Contributions welcome! See our comprehensive <a href="development/TEST_STRATEGY_REVIEW/">Test Strategy</a> for testing guidelines.</p>
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
