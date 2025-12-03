@@ -1,6 +1,6 @@
 # Infinigram REST API Documentation
 
-**Version**: 0.2.0
+**Version**: 0.4.0
 **Status**: Production Ready
 **Compatibility**: OpenAI API v1
 
@@ -11,6 +11,7 @@ Infinigram provides an OpenAI-compatible REST API for corpus-based language mode
 - Manage multiple models simultaneously
 - Use hierarchical weighted predictions
 - Get detailed match metadata and confidence scores
+- Introspect suffix matches and confidence at any context
 
 ## Quick Start
 
@@ -62,10 +63,20 @@ Root endpoint with API information.
 ```json
 {
   "message": "Infinigram API",
-  "version": "0.2.0",
+  "version": "0.4.0",
+  "description": "Corpus-based language model with OpenAI-compatible API",
   "endpoints": {
     "completions": "/v1/completions",
-    "models": "/v1/models"
+    "models": "/v1/models",
+    "predict": "/v1/predict",
+    "predict_backoff": "/v1/predict_backoff",
+    "suffix_matches": "/v1/suffix_matches",
+    "longest_suffix": "/v1/longest_suffix",
+    "confidence": "/v1/confidence",
+    "count": "/v1/count",
+    "search": "/v1/search",
+    "transforms": "/v1/transforms",
+    "health": "/health"
   }
 }
 ```
@@ -271,6 +282,155 @@ curl -X DELETE http://localhost:8000/v1/models/test-model
 }
 ```
 
+### Introspection Endpoints
+
+These endpoints provide direct access to model introspection without generating completions.
+
+#### `POST /v1/predict`
+Get next-byte predictions for a context.
+
+**Request Body:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "top_k": 50,
+  "smoothing": 0.0,
+  "weight_function": null,
+  "transforms": ["lowercase"]
+}
+```
+
+**Response:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "predictions": [
+    {"byte": 32, "char": " ", "probability": 0.853},
+    {"byte": 115, "char": "s", "probability": 0.042}
+  ],
+  "transforms": ["lowercase"],
+  "weight_function": null
+}
+```
+
+#### `POST /v1/predict_backoff`
+Get predictions using Stupid Backoff smoothing.
+
+**Request Body:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "top_k": 50,
+  "backoff_factor": 0.4,
+  "min_count_threshold": 1,
+  "smoothing": 0.0,
+  "transforms": null
+}
+```
+
+**Response:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "predictions": [
+    {"byte": 32, "char": " ", "probability": 0.853}
+  ],
+  "backoff_factor": 0.4,
+  "min_count_threshold": 1,
+  "transforms": null
+}
+```
+
+#### `POST /v1/suffix_matches`
+Find all matching suffixes at different lengths.
+
+**Request Body:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "transforms": null
+}
+```
+
+**Response:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "context_length": 7,
+  "matches": [
+    {"length": 7, "suffix": "the cat", "count": 3, "positions": [12, 45, 78]},
+    {"length": 3, "suffix": "cat", "count": 8, "positions": [12, 45, 78, 102, ...]}
+  ],
+  "transforms": null
+}
+```
+
+#### `POST /v1/longest_suffix`
+Find the longest matching suffix.
+
+**Request Body:**
+```json
+{
+  "model": "demo",
+  "context": "the cat sat on",
+  "transforms": null
+}
+```
+
+**Response:**
+```json
+{
+  "model": "demo",
+  "context": "the cat sat on",
+  "context_length": 14,
+  "match_position": 42,
+  "match_length": 10,
+  "matched_suffix": "at sat on",
+  "transforms": null
+}
+```
+
+#### `POST /v1/confidence`
+Get confidence score for a context.
+
+**Request Body:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "transforms": null
+}
+```
+
+**Response:**
+```json
+{
+  "model": "demo",
+  "context": "the cat",
+  "confidence": 0.78,
+  "match_length": 7,
+  "context_length": 7,
+  "transforms": null
+}
+```
+
+#### `GET /v1/transforms`
+List available transforms.
+
+**Response:**
+```json
+{
+  "transforms": ["lowercase", "uppercase", "casefold", "strip", "normalize_whitespace"],
+  "description": "Available runtime query transforms"
+}
+```
+
 ## Advanced Features
 
 ### Hierarchical Weighted Prediction
@@ -368,10 +528,12 @@ next_token = sample(mixed_probs)
 ### Invalid Request
 ```json
 {
-  "detail": "String prompts not yet supported. Please provide a list of integer token IDs."
+  "detail": "Request validation error"
 }
 ```
-**HTTP Status:** 400
+**HTTP Status:** 422
+
+Note: String prompts are now fully supported and automatically converted to UTF-8 bytes.
 
 ### Unknown Weight Function
 ```json
@@ -389,6 +551,12 @@ next_token = sample(mixed_probs)
 - **Model loading**: Instant (no training required)
 
 ## Roadmap
+
+Completed in v0.4.0:
+- [x] String prompt support (auto UTF-8 conversion)
+- [x] Introspection endpoints (predict, suffix_matches, confidence)
+- [x] Backoff smoothing endpoint
+- [x] Transforms listing endpoint
 
 Planned enhancements:
 - [ ] Streaming responses for long completions

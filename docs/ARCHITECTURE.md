@@ -1,8 +1,8 @@
 # Infinigram Architecture & Vision
 
-**Version**: 0.2.0 (Post-LangCalc Independence)
-**Date**: October 17, 2025
-**Status**: Design Phase
+**Version**: 0.4.0
+**Date**: December 2025
+**Status**: Production
 
 ## Vision
 
@@ -322,39 +322,45 @@ probs_exp = server.predict("experimental", context)
 
 ## Implementation Roadmap
 
-### Phase 1: Cleanup & Core API (Current)
+### Phase 1: Core API ✅ Complete
 - [x] Remove LangCalc dependencies
-- [ ] Fix test imports
-- [ ] Remove `LanguageModel` ABC (not needed standalone)
-- [ ] Add `predict_weighted()` for multi-length matching
-- [ ] Comprehensive unit tests for new APIs
+- [x] Fix test imports
+- [x] Unified `Infinigram` class with runtime transforms
+- [x] Add `predict_weighted()` for multi-length matching
+- [x] Add `predict_backoff()` for Stupid Backoff smoothing
+- [x] Add `find_all_suffix_matches()` for introspection
+- [x] Comprehensive unit tests (429 tests, 93% coverage)
 
-### Phase 2: REST API Server
-- [ ] FastAPI-based REST server
-- [ ] OpenAI-compatible endpoints (`/v1/completions`, `/v1/chat/completions`)
-- [ ] Model loading/unloading endpoints
+### Phase 2: REST API Server ✅ Complete
+- [x] FastAPI-based REST server
+- [x] OpenAI-compatible `/v1/completions` endpoint
+- [x] Model loading/unloading endpoints
+- [x] Introspection endpoints (`/v1/predict`, `/v1/suffix_matches`, `/v1/confidence`)
+- [x] Backoff smoothing endpoint (`/v1/predict_backoff`)
 - [ ] Authentication & rate limiting
 - [ ] Streaming responses
 - [ ] Docker container
 
-### Phase 3: CLI & Shell
+### Phase 3: CLI & Shell ✅ Complete
+- [x] Entry points for REPL and server
+- [x] `infinigram-serve` for starting server
+- [x] `infinigram-repl` for interactive REPL
+- [x] Unix-style navigation (`pwd`, `cd`, `ls`)
+- [x] Tab completion, history
 - [ ] Click-based CLI with subcommands
 - [ ] `infinigram build` for corpus creation
-- [ ] `infinigram serve` for starting server
-- [ ] `infinigram predict` for one-shot inference
-- [ ] `infinigram shell` for interactive REPL
-- [ ] Tab completion, history, config files
 
-### Phase 4: Advanced Matching
-- [ ] Hierarchical suffix weighting
+### Phase 4: Advanced Matching ✅ Partial
+- [x] Hierarchical suffix weighting (`predict_weighted`)
+- [x] Configurable weight functions (linear, quadratic, exponential, sigmoid)
+- [x] Runtime query transforms (lowercase, uppercase, casefold, strip, normalize_whitespace)
 - [ ] Input projections (lemmatization, semantic)
 - [ ] Output projections (filtering, mapping)
-- [ ] Configurable weight functions
 - [ ] Multi-scale matching (char/subword/word)
 
-### Phase 5: Performance & Scale
-- [ ] Binary search for suffix array queries (vs current linear scan)
-- [ ] Memory-mapped corpus files for large datasets
+### Phase 5: Performance & Scale ✅ Partial
+- [x] Binary search for suffix array queries (O(m log n))
+- [x] Memory-mapped corpus files via pydivsufsort
 - [ ] Compressed suffix arrays
 - [ ] Parallel construction
 - [ ] GPU acceleration for batch inference

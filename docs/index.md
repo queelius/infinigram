@@ -2,6 +2,8 @@
 
 Welcome to the Infinigram documentation! Infinigram is a high-speed, corpus-based language model that uses suffix arrays for variable-length n-gram pattern matching.
 
+**Version**: 0.4.0
+
 ## What is Infinigram?
 
 Unlike traditional neural language models or fixed-order n-grams, Infinigram:
@@ -22,10 +24,23 @@ Handle out-of-distribution (OOD) data through runtime query transformations:
 - **Sequential composition**: Apply multiple transforms in order
 - **Beam search**: Explore transform combinations with `predict_search()`
 
-### Future OOD Features (Planned)
-The following features are planned but deferred due to runtime performance concerns:
-- **Typo correction**: Edit distance-based corrections (requires fuzzy suffix arrays)
-- **Semantic synonyms**: WordNet-based synonym matching (requires embedding integration)
+### Multi-Length Suffix Matching
+- **`find_all_suffix_matches()`**: Find all matching suffixes at different lengths with corpus positions
+- **`predict_weighted()`**: Combine predictions from multiple suffix lengths with configurable weighting
+- **`predict_backoff()`**: Stupid Backoff smoothing algorithm (Brants et al., 2007)
+
+### Interactive REPL
+Unix-style navigation and model management:
+- `pwd`, `cd`, `ls` - Navigate between models
+- `predict`, `complete` - Make predictions
+- Projection-based augmentation
+
+### REST API (OpenAI-compatible)
+Full-featured REST API with introspection endpoints:
+- `/v1/completions` - Generate text completions
+- `/v1/predict` - Get next-byte predictions
+- `/v1/suffix_matches` - Find all suffix matches
+- `/v1/confidence` - Get confidence scores
 
 ## Quick Start
 
@@ -59,6 +74,17 @@ probs = model.predict(b"THE CAT", transforms=['lowercase', 'strip'])
 
 # Beam search over transform combinations
 probs = model.predict_search(context, search=['lowercase', 'casefold'])
+```
+
+### With Backoff Smoothing
+
+```python
+# Stupid Backoff: uses longest match if confident, backs off with penalty
+probs = model.predict_backoff(b"the cat", backoff_factor=0.4)
+
+# Find all suffix matches at different lengths
+matches = model.find_all_suffix_matches(b"the cat")
+# Returns: [(7, [pos1, pos2]), (3, [pos3, ...]), ...]  # (length, positions)
 ```
 
 ## Documentation Sections

@@ -2,6 +2,8 @@
 
 The Infinigram REPL (Read-Eval-Print Loop) provides an interactive shell for exploring byte-level language models, testing predictions, and training models incrementally.
 
+**Version**: 0.4.0 - Now with Unix-style navigation (`pwd`, `cd`, `ls`)
+
 ## Getting Started
 
 ### Starting the REPL
@@ -46,6 +48,47 @@ infinigram [english]>    # "english" dataset is active
 ```
 
 ## Commands
+
+### Navigation (Unix-style)
+
+New in v0.4.0: Unix-style commands for navigating between models.
+
+#### `pwd` - Show Current Model
+Display the currently loaded model and its path.
+
+```
+infinigram [english]> pwd
+/english
+  Path: /home/user/.infinigram/models/english
+  Size: 1,048,576 bytes
+```
+
+#### `cd <model>` - Switch to Model
+Change to a different model. Supports Unix-style shortcuts:
+
+- `cd model-name` - Switch to named model
+- `cd ..` - Unload current model (go to root)
+- `cd -` - Switch to previous model
+- `cd ~` or `cd /` - Unload current model
+
+```
+infinigram> cd english          # Load 'english' model
+infinigram [english]> cd spanish    # Switch to 'spanish'
+infinigram [spanish]> cd -          # Back to 'english'
+infinigram [english]> cd ..         # Unload model
+infinigram>
+```
+
+#### `ls` - List Available Models
+Alias for `models` command - shows all available models.
+
+```
+infinigram> ls
+Available models:
+  english: 1,048,576 bytes
+  spanish: 524,288 bytes
+  code: 2,097,152 bytes
+```
 
 ### Dataset Management
 
