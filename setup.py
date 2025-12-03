@@ -10,7 +10,7 @@ readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
 
 setup(
-    name="infinigram",
+    name="py-infinigram",
     version="0.4.1",
     author="Alex Towell",
     author_email="lex@metafunctor.com",
