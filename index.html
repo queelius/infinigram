@@ -447,9 +447,27 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#future-ood-features-planned" class="md-nav__link">
+  <a href="#multi-length-suffix-matching" class="md-nav__link">
     <span class="md-ellipsis">
-      Future OOD Features (Planned)
+      Multi-Length Suffix Matching
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactive-repl" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interactive REPL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rest-api-openai-compatible" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST API (OpenAI-compatible)
     </span>
   </a>
   
@@ -474,6 +492,15 @@
   <a href="#with-runtime-transforms" class="md-nav__link">
     <span class="md-ellipsis">
       With Runtime Transforms
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-backoff-smoothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Backoff Smoothing
     </span>
   </a>
   
@@ -1079,9 +1106,27 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#future-ood-features-planned" class="md-nav__link">
+  <a href="#multi-length-suffix-matching" class="md-nav__link">
     <span class="md-ellipsis">
-      Future OOD Features (Planned)
+      Multi-Length Suffix Matching
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#interactive-repl" class="md-nav__link">
+    <span class="md-ellipsis">
+      Interactive REPL
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rest-api-openai-compatible" class="md-nav__link">
+    <span class="md-ellipsis">
+      REST API (OpenAI-compatible)
     </span>
   </a>
   
@@ -1106,6 +1151,15 @@
   <a href="#with-runtime-transforms" class="md-nav__link">
     <span class="md-ellipsis">
       With Runtime Transforms
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-backoff-smoothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      With Backoff Smoothing
     </span>
   </a>
   
@@ -1284,6 +1338,7 @@
 
 <h1 id="infinigram-documentation">Infinigram Documentation<a class="headerlink" href="#infinigram-documentation" title="Permanent link">&para;</a></h1>
 <p>Welcome to the Infinigram documentation! Infinigram is a high-speed, corpus-based language model that uses suffix arrays for variable-length n-gram pattern matching.</p>
+<p><strong>Version</strong>: 0.4.0</p>
 <h2 id="what-is-infinigram">What is Infinigram?<a class="headerlink" href="#what-is-infinigram" title="Permanent link">&para;</a></h2>
 <p>Unlike traditional neural language models or fixed-order n-grams, Infinigram:</p>
 <ul>
@@ -1302,10 +1357,23 @@
 <li><strong>Sequential composition</strong>: Apply multiple transforms in order</li>
 <li><strong>Beam search</strong>: Explore transform combinations with <code>predict_search()</code></li>
 </ul>
-<h3 id="future-ood-features-planned">Future OOD Features (Planned)<a class="headerlink" href="#future-ood-features-planned" title="Permanent link">&para;</a></h3>
-<p>The following features are planned but deferred due to runtime performance concerns:
-- <strong>Typo correction</strong>: Edit distance-based corrections (requires fuzzy suffix arrays)
-- <strong>Semantic synonyms</strong>: WordNet-based synonym matching (requires embedding integration)</p>
+<h3 id="multi-length-suffix-matching">Multi-Length Suffix Matching<a class="headerlink" href="#multi-length-suffix-matching" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong><code>find_all_suffix_matches()</code></strong>: Find all matching suffixes at different lengths with corpus positions</li>
+<li><strong><code>predict_weighted()</code></strong>: Combine predictions from multiple suffix lengths with configurable weighting</li>
+<li><strong><code>predict_backoff()</code></strong>: Stupid Backoff smoothing algorithm (Brants et al., 2007)</li>
+</ul>
+<h3 id="interactive-repl">Interactive REPL<a class="headerlink" href="#interactive-repl" title="Permanent link">&para;</a></h3>
+<p>Unix-style navigation and model management:
+- <code>pwd</code>, <code>cd</code>, <code>ls</code> - Navigate between models
+- <code>predict</code>, <code>complete</code> - Make predictions
+- Projection-based augmentation</p>
+<h3 id="rest-api-openai-compatible">REST API (OpenAI-compatible)<a class="headerlink" href="#rest-api-openai-compatible" title="Permanent link">&para;</a></h3>
+<p>Full-featured REST API with introspection endpoints:
+- <code>/v1/completions</code> - Generate text completions
+- <code>/v1/predict</code> - Get next-byte predictions
+- <code>/v1/suffix_matches</code> - Find all suffix matches
+- <code>/v1/confidence</code> - Get confidence scores</p>
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">infinigram</span><span class="w"> </span><span class="kn">import</span> <span class="n">Infinigram</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
@@ -1334,6 +1402,14 @@
 <a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="c1"># Beam search over transform combinations</span>
 <a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_search</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;lowercase&#39;</span><span class="p">,</span> <span class="s1">&#39;casefold&#39;</span><span class="p">])</span>
 </code></pre></div>
+<h3 id="with-backoff-smoothing">With Backoff Smoothing<a class="headerlink" href="#with-backoff-smoothing" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Stupid Backoff: uses longest match if confident, backs off with penalty</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">probs</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict_backoff</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;the cat&quot;</span><span class="p">,</span> <span class="n">backoff_factor</span><span class="o">=</span><span class="mf">0.4</span><span class="p">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Find all suffix matches at different lengths</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">matches</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">find_all_suffix_matches</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;the cat&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Returns: [(7, [pos1, pos2]), (3, [pos3, ...]), ...]  # (length, positions)</span>
+</code></pre></div>
 <h2 id="documentation-sections">Documentation Sections<a class="headerlink" href="#documentation-sections" title="Permanent link">&para;</a></h2>
 <h3 id="user-guides">User Guides<a class="headerlink" href="#user-guides" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1351,27 +1427,27 @@
 <li><strong><a href="development/PRIORITY_TESTS_TO_ADD/">Priority Tests</a></strong>: Ready-to-add test implementations</li>
 </ul>
 <h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
 </code></pre></div>
 <p>For development:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="o">[</span>dev<span class="o">]</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.<span class="o">[</span>dev<span class="o">]</span>
 </code></pre></div></p>
 <h2 id="running-tests">Running Tests<a class="headerlink" href="#running-tests" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Run all tests</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>pytest<span class="w"> </span>tests/
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Run with coverage</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>--cov<span class="o">=</span>infinigram<span class="w"> </span>--cov-report<span class="o">=</span>html
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Run specific test file</span>
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>pytest<span class="w"> </span>tests/test_infinigram.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Run all tests</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>pytest<span class="w"> </span>tests/
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Run with coverage</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>pytest<span class="w"> </span>tests/<span class="w"> </span>--cov<span class="o">=</span>infinigram<span class="w"> </span>--cov-report<span class="o">=</span>html
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># Run specific test file</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>pytest<span class="w"> </span>tests/test_infinigram.py
 </code></pre></div>
 <h2 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
 <h3 id="1-domain-specific-grounding">1. Domain-Specific Grounding<a class="headerlink" href="#1-domain-specific-grounding" title="Permanent link">&para;</a></h3>
 <p>Mix Infinigram probabilities with LLM probabilities to ground outputs in specific corpora:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">llm_probs</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">corpus_probs</span> <span class="o">=</span> <span class="n">infinigram</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="n">final_probs</span> <span class="o">=</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="n">llm_probs</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">corpus_probs</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">llm_probs</span> <span class="o">=</span> <span class="n">llm</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">corpus_probs</span> <span class="o">=</span> <span class="n">infinigram</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">final_probs</span> <span class="o">=</span> <span class="mf">0.7</span> <span class="o">*</span> <span class="n">llm_probs</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">corpus_probs</span>
 </code></pre></div>
 <h3 id="2-fast-pattern-matching">2. Fast Pattern Matching<a class="headerlink" href="#2-fast-pattern-matching" title="Permanent link">&para;</a></h3>
 <p>Orders of magnitude faster than neural inference for pattern-based predictions.</p>
@@ -1386,12 +1462,12 @@
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
 <p>[License information here]</p>
 <h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">infinigram2024</span><span class="p">,</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Infinigram: Variable-Length N-gram Language Model}</span><span class="p">,</span>
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Towell, Alex}</span><span class="p">,</span>
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2024}</span><span class="p">,</span>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="na">url</span><span class="p">=</span><span class="s">{https://github.com/queelius/infinigram}</span>
-<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nc">@software</span><span class="p">{</span><span class="nl">infinigram2024</span><span class="p">,</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span><span class="na">title</span><span class="p">=</span><span class="s">{Infinigram: Variable-Length N-gram Language Model}</span><span class="p">,</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="na">author</span><span class="p">=</span><span class="s">{Towell, Alex}</span><span class="p">,</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="na">year</span><span class="p">=</span><span class="s">{2024}</span><span class="p">,</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span><span class="na">url</span><span class="p">=</span><span class="s">{https://github.com/queelius/infinigram}</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="p">}</span>
 </code></pre></div>
 
 

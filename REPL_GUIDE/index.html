@@ -626,6 +626,48 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#navigation-unix-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      Navigation (Unix-style)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Navigation (Unix-style)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pwd-show-current-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      pwd - Show Current Model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cd-model-switch-to-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      cd &lt;model&gt; - Switch to Model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ls-list-available-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      ls - List Available Models
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#dataset-management" class="md-nav__link">
     <span class="md-ellipsis">
       Dataset Management
@@ -1471,6 +1513,48 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#navigation-unix-style" class="md-nav__link">
+    <span class="md-ellipsis">
+      Navigation (Unix-style)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Navigation (Unix-style)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pwd-show-current-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      pwd - Show Current Model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cd-model-switch-to-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      cd &lt;model&gt; - Switch to Model
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ls-list-available-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      ls - List Available Models
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#dataset-management" class="md-nav__link">
     <span class="md-ellipsis">
       Dataset Management
@@ -1985,6 +2069,7 @@
 
 <h1 id="infinigram-repl-guide">Infinigram REPL Guide<a class="headerlink" href="#infinigram-repl-guide" title="Permanent link">&para;</a></h1>
 <p>The Infinigram REPL (Read-Eval-Print Loop) provides an interactive shell for exploring byte-level language models, testing predictions, and training models incrementally.</p>
+<p><strong>Version</strong>: 0.4.0 - Now with Unix-style navigation (<code>pwd</code>, <code>cd</code>, <code>ls</code>)</p>
 <h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
 <h3 id="starting-the-repl">Starting the REPL<a class="headerlink" href="#starting-the-repl" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># From Python</span>
@@ -2017,18 +2102,49 @@
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>infinigram [english]&gt;    # &quot;english&quot; dataset is active
 </code></pre></div>
 <h2 id="commands">Commands<a class="headerlink" href="#commands" title="Permanent link">&para;</a></h2>
+<h3 id="navigation-unix-style">Navigation (Unix-style)<a class="headerlink" href="#navigation-unix-style" title="Permanent link">&para;</a></h3>
+<p>New in v0.4.0: Unix-style commands for navigating between models.</p>
+<h4 id="pwd-show-current-model"><code>pwd</code> - Show Current Model<a class="headerlink" href="#pwd-show-current-model" title="Permanent link">&para;</a></h4>
+<p>Display the currently loaded model and its path.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>infinigram [english]&gt; pwd
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>/english
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  Path: /home/user/.infinigram/models/english
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>  Size: 1,048,576 bytes
+</code></pre></div>
+<h4 id="cd-model-switch-to-model"><code>cd &lt;model&gt;</code> - Switch to Model<a class="headerlink" href="#cd-model-switch-to-model" title="Permanent link">&para;</a></h4>
+<p>Change to a different model. Supports Unix-style shortcuts:</p>
+<ul>
+<li><code>cd model-name</code> - Switch to named model</li>
+<li><code>cd ..</code> - Unload current model (go to root)</li>
+<li><code>cd -</code> - Switch to previous model</li>
+<li><code>cd ~</code> or <code>cd /</code> - Unload current model</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>infinigram&gt; cd english          # Load &#39;english&#39; model
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>infinigram [english]&gt; cd spanish    # Switch to &#39;spanish&#39;
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>infinigram [spanish]&gt; cd -          # Back to &#39;english&#39;
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>infinigram [english]&gt; cd ..         # Unload model
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>infinigram&gt;
+</code></pre></div>
+<h4 id="ls-list-available-models"><code>ls</code> - List Available Models<a class="headerlink" href="#ls-list-available-models" title="Permanent link">&para;</a></h4>
+<p>Alias for <code>models</code> command - shows all available models.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>infinigram&gt; ls
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Available models:
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  english: 1,048,576 bytes
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  spanish: 524,288 bytes
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  code: 2,097,152 bytes
+</code></pre></div>
 <h3 id="dataset-management">Dataset Management<a class="headerlink" href="#dataset-management" title="Permanent link">&para;</a></h3>
 <h4 id="dataset-name-create-or-switch-to-dataset"><code>/dataset &lt;name&gt;</code> - Create or Switch to Dataset<a class="headerlink" href="#dataset-name-create-or-switch-to-dataset" title="Permanent link">&para;</a></h4>
 <p>Create a new dataset or switch to an existing one.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>infinigram&gt; /dataset english
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>✓ Created dataset: english
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>✓ Switched to dataset: english
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>infinigram&gt; /dataset english
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>✓ Created dataset: english
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>✓ Switched to dataset: english
 </code></pre></div>
 <h4 id="dataset-copy-source-destination-copy-dataset"><code>/dataset copy &lt;source&gt; &lt;destination&gt;</code> - Copy Dataset<a class="headerlink" href="#dataset-copy-source-destination-copy-dataset" title="Permanent link">&para;</a></h4>
 <p>Create a deep copy of an existing dataset with all its data and configuration.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>infinigram [english]&gt; /dataset copy english english_backup
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>✓ Copied dataset &#39;english&#39; to &#39;english_backup&#39;
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  Size: 1024 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>infinigram [english]&gt; /dataset copy english english_backup
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>✓ Copied dataset &#39;english&#39; to &#39;english_backup&#39;
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  Size: 1024 bytes
 </code></pre></div>
 <p>This is useful for:
 - Creating backups before augmentation
@@ -2036,98 +2152,98 @@
 - A/B testing different model configurations</p>
 <h4 id="datasets-list-all-datasets"><code>/datasets</code> - List All Datasets<a class="headerlink" href="#datasets-list-all-datasets" title="Permanent link">&para;</a></h4>
 <p>See all loaded datasets and their sizes.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>infinigram [english]&gt; /datasets
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Available datasets:
-<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  english: 1024 bytes (current)
-<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>  spanish: 2048 bytes
-<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>  code: 512 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>infinigram [english]&gt; /datasets
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Available datasets:
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  english: 1024 bytes (current)
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  spanish: 2048 bytes
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>  code: 512 bytes
 </code></pre></div>
 <h4 id="use-name-switch-dataset"><code>/use &lt;name&gt;</code> - Switch Dataset<a class="headerlink" href="#use-name-switch-dataset" title="Permanent link">&para;</a></h4>
 <p>Switch to a different dataset.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>infinigram [english]&gt; /use spanish
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>✓ Switched to dataset: spanish
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>infinigram [english]&gt; /use spanish
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>✓ Switched to dataset: spanish
 </code></pre></div>
 <h3 id="loading-data">Loading Data<a class="headerlink" href="#loading-data" title="Permanent link">&para;</a></h3>
 <h4 id="load-text-load-text"><code>/load &lt;text&gt;</code> - Load Text<a class="headerlink" href="#load-text-load-text" title="Permanent link">&para;</a></h4>
 <p>Create a dataset from inline text.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>infinigram&gt; /dataset demo
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>infinigram [demo]&gt; /load the cat sat on the mat
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>✓ Loaded into &#39;demo&#39;: 23 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>infinigram&gt; /dataset demo
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>infinigram [demo]&gt; /load the cat sat on the mat
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>✓ Loaded into &#39;demo&#39;: 23 bytes
 </code></pre></div>
 <h4 id="load-file-path-load-from-file"><code>/load --file &lt;path&gt;</code> - Load from File<a class="headerlink" href="#load-file-path-load-from-file" title="Permanent link">&para;</a></h4>
 <p>Load a text file into the current dataset.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>infinigram [demo]&gt; /load --file data/shakespeare.txt
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>Loaded 1048576 characters from data/shakespeare.txt
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>✓ Loaded into &#39;demo&#39;: 1048576 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>infinigram [demo]&gt; /load --file data/shakespeare.txt
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>Loaded 1048576 characters from data/shakespeare.txt
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>✓ Loaded into &#39;demo&#39;: 1048576 bytes
 </code></pre></div>
 <h4 id="load-jsonl-path-load-from-jsonl"><code>/load --jsonl &lt;path&gt;</code> - Load from JSONL<a class="headerlink" href="#load-jsonl-path-load-from-jsonl" title="Permanent link">&para;</a></h4>
 <p>Load documents from a JSONL file. Each line should be a JSON object with a <code>text</code> field.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>infinigram [demo]&gt; /load --jsonl data/documents.jsonl
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>Loaded 1000 documents from data/documents.jsonl
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>✓ Loaded into &#39;demo&#39;: 524288 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>infinigram [demo]&gt; /load --jsonl data/documents.jsonl
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>Loaded 1000 documents from data/documents.jsonl
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>✓ Loaded into &#39;demo&#39;: 524288 bytes
 </code></pre></div>
 <p><strong>JSONL Format</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{&quot;text&quot;: &quot;First document content&quot;}
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>{&quot;text&quot;: &quot;Second document content&quot;}
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>{&quot;text&quot;: &quot;Third document content&quot;}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>{&quot;text&quot;: &quot;First document content&quot;}
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>{&quot;text&quot;: &quot;Second document content&quot;}
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>{&quot;text&quot;: &quot;Third document content&quot;}
 </code></pre></div></p>
 <p>Documents are automatically separated with <code>\n\n</code> to prevent cross-document patterns.</p>
 <p><strong>Custom Field</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>data.jsonl<span class="w"> </span>--field<span class="w"> </span>content
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>data.jsonl<span class="w"> </span>--field<span class="w"> </span>content
 </code></pre></div></p>
 <h3 id="incremental-training">Incremental Training<a class="headerlink" href="#incremental-training" title="Permanent link">&para;</a></h3>
 <h4 id="add-text-add-text-to-dataset"><code>/add &lt;text&gt;</code> - Add Text to Dataset<a class="headerlink" href="#add-text-add-text-to-dataset" title="Permanent link">&para;</a></h4>
 <p>Add more training examples to the current dataset.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>infinigram [demo]&gt; /add the dog sat on the log
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>✓ Added 23 bytes to &#39;demo&#39;
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>  Total corpus size: 46 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>infinigram [demo]&gt; /add the dog sat on the log
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>✓ Added 23 bytes to &#39;demo&#39;
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  Total corpus size: 46 bytes
 </code></pre></div>
 <h4 id="add-file-path-add-file"><code>/add --file &lt;path&gt;</code> - Add File<a class="headerlink" href="#add-file-path-add-file" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>infinigram [demo]&gt; /add --file more_data.txt
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>✓ Added 2048 bytes to &#39;demo&#39;
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>  Total corpus size: 2094 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>infinigram [demo]&gt; /add --file more_data.txt
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>✓ Added 2048 bytes to &#39;demo&#39;
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  Total corpus size: 2094 bytes
 </code></pre></div>
 <h4 id="add-jsonl-path-add-jsonl"><code>/add --jsonl &lt;path&gt;</code> - Add JSONL<a class="headerlink" href="#add-jsonl-path-add-jsonl" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>infinigram [demo]&gt; /add --jsonl more_docs.jsonl
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>Loaded 100 documents from more_docs.jsonl
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>✓ Added 51200 bytes to &#39;demo&#39;
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>  Total corpus size: 53294 bytes
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>infinigram [demo]&gt; /add --jsonl more_docs.jsonl
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>Loaded 100 documents from more_docs.jsonl
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>✓ Added 51200 bytes to &#39;demo&#39;
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>  Total corpus size: 53294 bytes
 </code></pre></div>
 <h3 id="prediction">Prediction<a class="headerlink" href="#prediction" title="Permanent link">&para;</a></h3>
 <h4 id="predict-text-show-next-byte-probabilities"><code>/predict &lt;text&gt;</code> - Show Next-Byte Probabilities<a class="headerlink" href="#predict-text-show-next-byte-probabilities" title="Permanent link">&para;</a></h4>
 <p>Display the probability distribution for the next byte.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>infinigram [demo]&gt; /predict the cat
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>Context: &#39;the cat&#39; (7 bytes)
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>Top 50 predictions:
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>  &#39; &#39; (byte 32): 0.853
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>  &#39;s&#39; (byte 115): 0.042
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>  &#39;.&#39; (byte 46): 0.031
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>  ...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>infinigram [demo]&gt; /predict the cat
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>Context: &#39;the cat&#39; (7 bytes)
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>Top 50 predictions:
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>  &#39; &#39; (byte 32): 0.853
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>  &#39;s&#39; (byte 115): 0.042
+<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>  &#39;.&#39; (byte 46): 0.031
+<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>  ...
 </code></pre></div>
 <p><strong>Show as bytes</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>infinigram [demo]&gt; /predict the cat --bytes
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>Context: &#39;the cat&#39; (7 bytes)
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>Top 50 predictions:
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>  Byte  32 (0x20): 0.853
-<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>  Byte 115 (0x73): 0.042
-<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>  Byte  46 (0x2E): 0.031
-<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>  ...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>infinigram [demo]&gt; /predict the cat --bytes
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>Context: &#39;the cat&#39; (7 bytes)
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>Top 50 predictions:
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>  Byte  32 (0x20): 0.853
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>  Byte 115 (0x73): 0.042
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>  Byte  46 (0x2E): 0.031
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>  ...
 </code></pre></div></p>
 <h4 id="complete-text-generate-completion"><code>/complete &lt;text&gt;</code> - Generate Completion<a class="headerlink" href="#complete-text-generate-completion" title="Permanent link">&para;</a></h4>
 <p>Generate a continuation of the input text.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>infinigram [demo]&gt; /complete the cat
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>Context: &#39;the cat&#39;
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>Generating up to 50 bytes...
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>Generated: &#39; sat on the mat. the dog ran on the log.&#39;
-<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>(45 bytes)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>infinigram [demo]&gt; /complete the cat
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>Context: &#39;the cat&#39;
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>Generating up to 50 bytes...
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>Generated: &#39; sat on the mat. the dog ran on the log.&#39;
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>(45 bytes)
 </code></pre></div>
 <p><strong>Specify length</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>infinigram [demo]&gt; /complete the cat --max 20
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>Generated: &#39; sat on the warm ma&#39;
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>(20 bytes)
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>infinigram [demo]&gt; /complete the cat --max 20
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>Generated: &#39; sat on the warm ma&#39;
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>(20 bytes)
 </code></pre></div></p>
 <h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
 <h4 id="temperature-value-sampling-temperature"><code>/temperature &lt;value&gt;</code> - Sampling Temperature<a class="headerlink" href="#temperature-value-sampling-temperature" title="Permanent link">&para;</a></h4>
@@ -2136,68 +2252,68 @@
 <li>Higher values (&gt;1.0) = more uniform/random</li>
 <li>Lower values (&lt;1.0) = more peaked/deterministic</li>
 </ul>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>infinigram [demo]&gt; /temperature 0.5
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>✓ Temperature set to 0.5
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>infinigram [demo]&gt; /temperature 2.0
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>✓ Temperature set to 2.0
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>infinigram [demo]&gt; /temperature 0.5
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>✓ Temperature set to 0.5
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>infinigram [demo]&gt; /temperature 2.0
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>✓ Temperature set to 2.0
 </code></pre></div>
 <h4 id="top_k-n-top-k-display"><code>/top_k &lt;n&gt;</code> - Top-K Display<a class="headerlink" href="#top_k-n-top-k-display" title="Permanent link">&para;</a></h4>
 <p>Set how many predictions to show (default: 50).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>infinigram [demo]&gt; /top_k 10
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>✓ top_k set to 10
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>infinigram [demo]&gt; /top_k 10
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>✓ top_k set to 10
 </code></pre></div>
 <h4 id="max_length-n-max-suffix-length"><code>/max_length &lt;n&gt;</code> - Max Suffix Length<a class="headerlink" href="#max_length-n-max-suffix-length" title="Permanent link">&para;</a></h4>
 <p>Limit the maximum suffix length for matching (default: unlimited).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>infinigram [demo]&gt; /max_length 20
-<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>✓ max_length set to 20
-<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
-<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>infinigram [demo]&gt; /max_length none
-<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>✓ max_length set to unlimited
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>infinigram [demo]&gt; /max_length 20
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>✓ max_length set to 20
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>infinigram [demo]&gt; /max_length none
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>✓ max_length set to unlimited
 </code></pre></div>
 <h4 id="weight-function-weight-function"><code>/weight &lt;function&gt;</code> - Weight Function<a class="headerlink" href="#weight-function-weight-function" title="Permanent link">&para;</a></h4>
 <p>Enable hierarchical weighted prediction.</p>
 <p>Options: <code>none</code>, <code>linear</code>, <code>quadratic</code>, <code>exponential</code>, <code>sigmoid</code></p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>infinigram [demo]&gt; /weight quadratic
-<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>✓ Weight function set to quadratic
-<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
-<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>infinigram [demo]&gt; /weight none
-<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>✓ Disabled weighted prediction
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>infinigram [demo]&gt; /weight quadratic
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>✓ Weight function set to quadratic
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>infinigram [demo]&gt; /weight none
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>✓ Disabled weighted prediction
 </code></pre></div>
 <h4 id="config-show-configuration"><code>/config</code> - Show Configuration<a class="headerlink" href="#config-show-configuration" title="Permanent link">&para;</a></h4>
 <p>Display current settings.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>infinigram [demo]&gt; /config
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>Current Configuration:
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>  Temperature: 1.0
-<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>  Top-k: 50
-<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>  Max suffix length: unlimited
-<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>  Weight function: none
-<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>  Weighted prediction min_length: 1
-<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>  Weighted prediction max_length: auto
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>infinigram [demo]&gt; /config
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>Current Configuration:
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>  Temperature: 1.0
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>  Top-k: 50
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>  Max suffix length: unlimited
+<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>  Weight function: none
+<a id="__codelineno-26-7" name="__codelineno-26-7" href="#__codelineno-26-7"></a>  Weighted prediction min_length: 1
+<a id="__codelineno-26-8" name="__codelineno-26-8" href="#__codelineno-26-8"></a>  Weighted prediction max_length: auto
 </code></pre></div>
 <h3 id="information">Information<a class="headerlink" href="#information" title="Permanent link">&para;</a></h3>
 <h4 id="info-dataset-information"><code>/info</code> - Dataset Information<a class="headerlink" href="#info-dataset-information" title="Permanent link">&para;</a></h4>
 <p>Show current dataset details.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>infinigram [demo]&gt; /info
-<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>Dataset: demo
-<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  Corpus size: 1024 bytes
-<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  Vocabulary size: 256
-<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>  Max suffix length: unlimited
-<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>  Min count: 1
-<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>  Smoothing: 0.01
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>infinigram [demo]&gt; /info
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>Dataset: demo
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  Corpus size: 1024 bytes
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>  Vocabulary size: 256
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>  Max suffix length: unlimited
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>  Min count: 1
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>  Smoothing: 0.01
 </code></pre></div>
 <h4 id="stats-corpus-statistics"><code>/stats</code> - Corpus Statistics<a class="headerlink" href="#stats-corpus-statistics" title="Permanent link">&para;</a></h4>
 <p>Show byte distribution statistics.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>infinigram [demo]&gt; /stats
-<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>Corpus Statistics:
-<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>  Total bytes: 1024
-<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>  Unique bytes: 52
-<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-<a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>  Top 10 most frequent bytes:
-<a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>     32 (&#39; &#39;):   156 (15.23%)
-<a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>    101 (&#39;e&#39;):   102 (9.96%)
-<a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>    116 (&#39;t&#39;):    89 (8.69%)
-<a id="__codelineno-25-10" name="__codelineno-25-10" href="#__codelineno-25-10"></a>    ...
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>infinigram [demo]&gt; /stats
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>Corpus Statistics:
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>  Total bytes: 1024
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>  Unique bytes: 52
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>  Top 10 most frequent bytes:
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>     32 (&#39; &#39;):   156 (15.23%)
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>    101 (&#39;e&#39;):   102 (9.96%)
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>    116 (&#39;t&#39;):    89 (8.69%)
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a>    ...
 </code></pre></div>
 <h3 id="augmentationprojections">Augmentation/Projections<a class="headerlink" href="#augmentationprojections" title="Permanent link">&para;</a></h3>
 <p>Augmentations apply transformations to your dataset, creating variants alongside the original data. This is powerful for case-insensitive models, normalization, and data augmentation.</p>
@@ -2208,12 +2324,12 @@
 - <code>uppercase</code> - Convert text to UPPERCASE
 - <code>title</code> - Convert Text To Title Case
 - <code>strip</code> - Remove leading/trailing whitespace</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>infinigram [demo]&gt; /augment lowercase uppercase
-<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>Applying 2 projection(s) to &#39;demo&#39;...
-<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>✓ Applied projections: lowercase, uppercase
-<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>  Original size: 100 bytes
-<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>  Augmented size: 300 bytes
-<a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>  Multiplier: 3.00x
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>infinigram [demo]&gt; /augment lowercase uppercase
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>Applying 2 projection(s) to &#39;demo&#39;...
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>✓ Applied projections: lowercase, uppercase
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>  Original size: 100 bytes
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>  Augmented size: 300 bytes
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>  Multiplier: 3.00x
 </code></pre></div>
 <p><strong>How it works</strong>:
 - Original data: "Hello World"
@@ -2224,33 +2340,33 @@
 <p>This creates a model that can handle multiple case variations.</p>
 <h4 id="projections-list-active-projections"><code>/projections</code> - List Active Projections<a class="headerlink" href="#projections-list-active-projections" title="Permanent link">&para;</a></h4>
 <p>Show which projections have been applied to the current dataset.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>infinigram [demo]&gt; /projections
-<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>Active projections for &#39;demo&#39;:
-<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  lowercase
-<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>  uppercase
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>infinigram [demo]&gt; /projections
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>Active projections for &#39;demo&#39;:
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>  lowercase
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a>  uppercase
 </code></pre></div>
 <h4 id="projections-available-list-available-projections"><code>/projections --available</code> - List Available Projections<a class="headerlink" href="#projections-available-list-available-projections" title="Permanent link">&para;</a></h4>
 <p>Show all registered projections you can apply.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>infinigram&gt; /projections --available
-<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>Available projections:
-<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>  lowercase
-<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>  strip
-<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>  title
-<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>  uppercase
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>infinigram&gt; /projections --available
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>Available projections:
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>  lowercase
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>  strip
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>  title
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>  uppercase
 </code></pre></div>
 <h3 id="bash-commands">Bash Commands<a class="headerlink" href="#bash-commands" title="Permanent link">&para;</a></h3>
 <h4 id="command-execute-bash-command"><code>!&lt;command&gt;</code> - Execute Bash Command<a class="headerlink" href="#command-execute-bash-command" title="Permanent link">&para;</a></h4>
 <p>Run any bash command from within the REPL. Useful for file operations, checking data, or quick system tasks.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>infinigram&gt; !ls -lh data/
-<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>-rw-r--r-- 1 user user 1.2M Oct 17 data.txt
-<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
-<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>infinigram&gt; !wc -l data/corpus.txt
-<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>10000 data/corpus.txt
-<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>
-<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>infinigram&gt; !head -3 data/sample.jsonl
-<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>{&quot;text&quot;: &quot;First document&quot;}
-<a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>{&quot;text&quot;: &quot;Second document&quot;}
-<a id="__codelineno-29-10" name="__codelineno-29-10" href="#__codelineno-29-10"></a>{&quot;text&quot;: &quot;Third document&quot;}
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>infinigram&gt; !ls -lh data/
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>-rw-r--r-- 1 user user 1.2M Oct 17 data.txt
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>infinigram&gt; !wc -l data/corpus.txt
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>10000 data/corpus.txt
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>infinigram&gt; !head -3 data/sample.jsonl
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>{&quot;text&quot;: &quot;First document&quot;}
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>{&quot;text&quot;: &quot;Second document&quot;}
+<a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>{&quot;text&quot;: &quot;Third document&quot;}
 </code></pre></div>
 <p>Commands run with a 30-second timeout and capture both stdout and stderr.</p>
 <h3 id="other">Other<a class="headerlink" href="#other" title="Permanent link">&para;</a></h3>
@@ -2260,110 +2376,110 @@
 <p>Leave the REPL.</p>
 <h4 id="reset-delete-current-dataset"><code>/reset</code> - Delete Current Dataset<a class="headerlink" href="#reset-delete-current-dataset" title="Permanent link">&para;</a></h4>
 <p>Remove the current dataset from memory.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>infinigram [demo]&gt; /reset
-<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>✓ Deleted dataset: demo
+<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a>infinigram [demo]&gt; /reset
+<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>✓ Deleted dataset: demo
 </code></pre></div>
 <h2 id="example-workflows">Example Workflows<a class="headerlink" href="#example-workflows" title="Permanent link">&para;</a></h2>
 <h3 id="dataset-copying-and-augmentation">Dataset Copying and Augmentation<a class="headerlink" href="#dataset-copying-and-augmentation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="c1"># Create a base dataset</span>
-<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>/dataset<span class="w"> </span>base
-<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>/load<span class="w"> </span>The<span class="w"> </span>quick<span class="w"> </span>brown<span class="w"> </span>fox<span class="w"> </span>jumps<span class="w"> </span>over<span class="w"> </span>the<span class="w"> </span>lazy<span class="w"> </span>dog.
-<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a>
-<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a><span class="c1"># Create a copy for experimentation</span>
-<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a>/dataset<span class="w"> </span>copy<span class="w"> </span>base<span class="w"> </span>base_augmented
-<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>
-<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a><span class="c1"># Apply augmentations to the copy</span>
-<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>/use<span class="w"> </span>base_augmented
-<a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>/augment<span class="w"> </span>lowercase<span class="w"> </span>uppercase
-<a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>
-<a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a><span class="c1"># Compare predictions</span>
-<a id="__codelineno-31-13" name="__codelineno-31-13" href="#__codelineno-31-13"></a>/use<span class="w"> </span>base
-<a id="__codelineno-31-14" name="__codelineno-31-14" href="#__codelineno-31-14"></a>/predict<span class="w"> </span>The<span class="w"> </span>quick
-<a id="__codelineno-31-15" name="__codelineno-31-15" href="#__codelineno-31-15"></a><span class="c1"># Only matches exact case</span>
-<a id="__codelineno-31-16" name="__codelineno-31-16" href="#__codelineno-31-16"></a>
-<a id="__codelineno-31-17" name="__codelineno-31-17" href="#__codelineno-31-17"></a>/use<span class="w"> </span>base_augmented
-<a id="__codelineno-31-18" name="__codelineno-31-18" href="#__codelineno-31-18"></a>/predict<span class="w"> </span>the<span class="w"> </span>quick
-<a id="__codelineno-31-19" name="__codelineno-31-19" href="#__codelineno-31-19"></a><span class="c1"># Works! Lowercase variant exists</span>
-<a id="__codelineno-31-20" name="__codelineno-31-20" href="#__codelineno-31-20"></a>
-<a id="__codelineno-31-21" name="__codelineno-31-21" href="#__codelineno-31-21"></a>/predict<span class="w"> </span>THE<span class="w"> </span>QUICK
-<a id="__codelineno-31-22" name="__codelineno-31-22" href="#__codelineno-31-22"></a><span class="c1"># Also works! Uppercase variant exists</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a><span class="c1"># Create a base dataset</span>
+<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>/dataset<span class="w"> </span>base
+<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a>/load<span class="w"> </span>The<span class="w"> </span>quick<span class="w"> </span>brown<span class="w"> </span>fox<span class="w"> </span>jumps<span class="w"> </span>over<span class="w"> </span>the<span class="w"> </span>lazy<span class="w"> </span>dog.
+<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>
+<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a><span class="c1"># Create a copy for experimentation</span>
+<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>/dataset<span class="w"> </span>copy<span class="w"> </span>base<span class="w"> </span>base_augmented
+<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>
+<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a><span class="c1"># Apply augmentations to the copy</span>
+<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>/use<span class="w"> </span>base_augmented
+<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a>/augment<span class="w"> </span>lowercase<span class="w"> </span>uppercase
+<a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a>
+<a id="__codelineno-34-12" name="__codelineno-34-12" href="#__codelineno-34-12"></a><span class="c1"># Compare predictions</span>
+<a id="__codelineno-34-13" name="__codelineno-34-13" href="#__codelineno-34-13"></a>/use<span class="w"> </span>base
+<a id="__codelineno-34-14" name="__codelineno-34-14" href="#__codelineno-34-14"></a>/predict<span class="w"> </span>The<span class="w"> </span>quick
+<a id="__codelineno-34-15" name="__codelineno-34-15" href="#__codelineno-34-15"></a><span class="c1"># Only matches exact case</span>
+<a id="__codelineno-34-16" name="__codelineno-34-16" href="#__codelineno-34-16"></a>
+<a id="__codelineno-34-17" name="__codelineno-34-17" href="#__codelineno-34-17"></a>/use<span class="w"> </span>base_augmented
+<a id="__codelineno-34-18" name="__codelineno-34-18" href="#__codelineno-34-18"></a>/predict<span class="w"> </span>the<span class="w"> </span>quick
+<a id="__codelineno-34-19" name="__codelineno-34-19" href="#__codelineno-34-19"></a><span class="c1"># Works! Lowercase variant exists</span>
+<a id="__codelineno-34-20" name="__codelineno-34-20" href="#__codelineno-34-20"></a>
+<a id="__codelineno-34-21" name="__codelineno-34-21" href="#__codelineno-34-21"></a>/predict<span class="w"> </span>THE<span class="w"> </span>QUICK
+<a id="__codelineno-34-22" name="__codelineno-34-22" href="#__codelineno-34-22"></a><span class="c1"># Also works! Uppercase variant exists</span>
 </code></pre></div>
 <h3 id="building-a-multi-domain-model">Building a Multi-Domain Model<a class="headerlink" href="#building-a-multi-domain-model" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># Create separate datasets for different domains</span>
-<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>/dataset<span class="w"> </span>code
-<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>/load<span class="w"> </span>--file<span class="w"> </span>python_code.txt
-<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a>
-<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a>/dataset<span class="w"> </span>prose
-<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a>/load<span class="w"> </span>--file<span class="w"> </span>shakespeare.txt
-<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>
-<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a>/dataset<span class="w"> </span>technical
-<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>papers.jsonl
-<a id="__codelineno-32-10" name="__codelineno-32-10" href="#__codelineno-32-10"></a>
-<a id="__codelineno-32-11" name="__codelineno-32-11" href="#__codelineno-32-11"></a><span class="c1"># Compare predictions</span>
-<a id="__codelineno-32-12" name="__codelineno-32-12" href="#__codelineno-32-12"></a>/use<span class="w"> </span>code
-<a id="__codelineno-32-13" name="__codelineno-32-13" href="#__codelineno-32-13"></a>/predict<span class="w"> </span>def<span class="w"> </span>fibonacci
-<a id="__codelineno-32-14" name="__codelineno-32-14" href="#__codelineno-32-14"></a>
-<a id="__codelineno-32-15" name="__codelineno-32-15" href="#__codelineno-32-15"></a>/use<span class="w"> </span>prose
-<a id="__codelineno-32-16" name="__codelineno-32-16" href="#__codelineno-32-16"></a>/predict<span class="w"> </span>To<span class="w"> </span>be<span class="w"> </span>or<span class="w"> </span>not
-<a id="__codelineno-32-17" name="__codelineno-32-17" href="#__codelineno-32-17"></a>
-<a id="__codelineno-32-18" name="__codelineno-32-18" href="#__codelineno-32-18"></a>/use<span class="w"> </span>technical
-<a id="__codelineno-32-19" name="__codelineno-32-19" href="#__codelineno-32-19"></a>/predict<span class="w"> </span>The<span class="w"> </span>algorithm
+<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1"># Create separate datasets for different domains</span>
+<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>/dataset<span class="w"> </span>code
+<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>/load<span class="w"> </span>--file<span class="w"> </span>python_code.txt
+<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>
+<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a>/dataset<span class="w"> </span>prose
+<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>/load<span class="w"> </span>--file<span class="w"> </span>shakespeare.txt
+<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>
+<a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a>/dataset<span class="w"> </span>technical
+<a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>papers.jsonl
+<a id="__codelineno-35-10" name="__codelineno-35-10" href="#__codelineno-35-10"></a>
+<a id="__codelineno-35-11" name="__codelineno-35-11" href="#__codelineno-35-11"></a><span class="c1"># Compare predictions</span>
+<a id="__codelineno-35-12" name="__codelineno-35-12" href="#__codelineno-35-12"></a>/use<span class="w"> </span>code
+<a id="__codelineno-35-13" name="__codelineno-35-13" href="#__codelineno-35-13"></a>/predict<span class="w"> </span>def<span class="w"> </span>fibonacci
+<a id="__codelineno-35-14" name="__codelineno-35-14" href="#__codelineno-35-14"></a>
+<a id="__codelineno-35-15" name="__codelineno-35-15" href="#__codelineno-35-15"></a>/use<span class="w"> </span>prose
+<a id="__codelineno-35-16" name="__codelineno-35-16" href="#__codelineno-35-16"></a>/predict<span class="w"> </span>To<span class="w"> </span>be<span class="w"> </span>or<span class="w"> </span>not
+<a id="__codelineno-35-17" name="__codelineno-35-17" href="#__codelineno-35-17"></a>
+<a id="__codelineno-35-18" name="__codelineno-35-18" href="#__codelineno-35-18"></a>/use<span class="w"> </span>technical
+<a id="__codelineno-35-19" name="__codelineno-35-19" href="#__codelineno-35-19"></a>/predict<span class="w"> </span>The<span class="w"> </span>algorithm
 </code></pre></div>
 <h3 id="incremental-training_1">Incremental Training<a class="headerlink" href="#incremental-training_1" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-33-1" name="__codelineno-33-1" href="#__codelineno-33-1"></a><span class="c1"># Start with base knowledge</span>
-<a id="__codelineno-33-2" name="__codelineno-33-2" href="#__codelineno-33-2"></a>/dataset<span class="w"> </span>assistant
-<a id="__codelineno-33-3" name="__codelineno-33-3" href="#__codelineno-33-3"></a>/load<span class="w"> </span>Hello!<span class="w"> </span>How<span class="w"> </span>can<span class="w"> </span>I<span class="w"> </span><span class="nb">help</span><span class="w"> </span>you<span class="w"> </span>today?
-<a id="__codelineno-33-4" name="__codelineno-33-4" href="#__codelineno-33-4"></a>
-<a id="__codelineno-33-5" name="__codelineno-33-5" href="#__codelineno-33-5"></a><span class="c1"># Add more examples as you go</span>
-<a id="__codelineno-33-6" name="__codelineno-33-6" href="#__codelineno-33-6"></a>/add<span class="w"> </span>I<span class="s1">&#39;m happy to assist with your questions.</span>
-<a id="__codelineno-33-7" name="__codelineno-33-7" href="#__codelineno-33-7"></a><span class="s1">/add Please let me know if you need anything else.</span>
-<a id="__codelineno-33-8" name="__codelineno-33-8" href="#__codelineno-33-8"></a><span class="s1">/add I&#39;</span>ll<span class="w"> </span><span class="k">do</span><span class="w"> </span>my<span class="w"> </span>best<span class="w"> </span>to<span class="w"> </span>provide<span class="w"> </span>helpful<span class="w"> </span>information.
-<a id="__codelineno-33-9" name="__codelineno-33-9" href="#__codelineno-33-9"></a>
-<a id="__codelineno-33-10" name="__codelineno-33-10" href="#__codelineno-33-10"></a><span class="c1"># Test predictions</span>
-<a id="__codelineno-33-11" name="__codelineno-33-11" href="#__codelineno-33-11"></a>/predict<span class="w"> </span>How<span class="w"> </span>can<span class="w"> </span>I
+<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="c1"># Start with base knowledge</span>
+<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>/dataset<span class="w"> </span>assistant
+<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>/load<span class="w"> </span>Hello!<span class="w"> </span>How<span class="w"> </span>can<span class="w"> </span>I<span class="w"> </span><span class="nb">help</span><span class="w"> </span>you<span class="w"> </span>today?
+<a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a>
+<a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="c1"># Add more examples as you go</span>
+<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a>/add<span class="w"> </span>I<span class="s1">&#39;m happy to assist with your questions.</span>
+<a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a><span class="s1">/add Please let me know if you need anything else.</span>
+<a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="s1">/add I&#39;</span>ll<span class="w"> </span><span class="k">do</span><span class="w"> </span>my<span class="w"> </span>best<span class="w"> </span>to<span class="w"> </span>provide<span class="w"> </span>helpful<span class="w"> </span>information.
+<a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a>
+<a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a><span class="c1"># Test predictions</span>
+<a id="__codelineno-36-11" name="__codelineno-36-11" href="#__codelineno-36-11"></a>/predict<span class="w"> </span>How<span class="w"> </span>can<span class="w"> </span>I
 </code></pre></div>
 <h3 id="experimenting-with-weight-functions">Experimenting with Weight Functions<a class="headerlink" href="#experimenting-with-weight-functions" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-34-1" name="__codelineno-34-1" href="#__codelineno-34-1"></a>/load<span class="w"> </span>the<span class="w"> </span>cat<span class="w"> </span>sat<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>mat.<span class="w"> </span>the<span class="w"> </span>cat<span class="w"> </span>ran.
-<a id="__codelineno-34-2" name="__codelineno-34-2" href="#__codelineno-34-2"></a>
-<a id="__codelineno-34-3" name="__codelineno-34-3" href="#__codelineno-34-3"></a><span class="c1"># Try different weighting schemes</span>
-<a id="__codelineno-34-4" name="__codelineno-34-4" href="#__codelineno-34-4"></a>/weight<span class="w"> </span>linear
-<a id="__codelineno-34-5" name="__codelineno-34-5" href="#__codelineno-34-5"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
-<a id="__codelineno-34-6" name="__codelineno-34-6" href="#__codelineno-34-6"></a>
-<a id="__codelineno-34-7" name="__codelineno-34-7" href="#__codelineno-34-7"></a>/weight<span class="w"> </span>quadratic
-<a id="__codelineno-34-8" name="__codelineno-34-8" href="#__codelineno-34-8"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
-<a id="__codelineno-34-9" name="__codelineno-34-9" href="#__codelineno-34-9"></a>
-<a id="__codelineno-34-10" name="__codelineno-34-10" href="#__codelineno-34-10"></a>/weight<span class="w"> </span>exponential
-<a id="__codelineno-34-11" name="__codelineno-34-11" href="#__codelineno-34-11"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
+<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a>/load<span class="w"> </span>the<span class="w"> </span>cat<span class="w"> </span>sat<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>mat.<span class="w"> </span>the<span class="w"> </span>cat<span class="w"> </span>ran.
+<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>
+<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a><span class="c1"># Try different weighting schemes</span>
+<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a>/weight<span class="w"> </span>linear
+<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
+<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a>
+<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>/weight<span class="w"> </span>quadratic
+<a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
+<a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a>
+<a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>/weight<span class="w"> </span>exponential
+<a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a>/predict<span class="w"> </span>the<span class="w"> </span>cat
 </code></pre></div>
 <h3 id="loading-from-jsonl">Loading from JSONL<a class="headerlink" href="#loading-from-jsonl" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-35-1" name="__codelineno-35-1" href="#__codelineno-35-1"></a><span class="c1"># Create a JSONL dataset</span>
-<a id="__codelineno-35-2" name="__codelineno-35-2" href="#__codelineno-35-2"></a>/dataset<span class="w"> </span>wiki
-<a id="__codelineno-35-3" name="__codelineno-35-3" href="#__codelineno-35-3"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>wikipedia_articles.jsonl
-<a id="__codelineno-35-4" name="__codelineno-35-4" href="#__codelineno-35-4"></a>
-<a id="__codelineno-35-5" name="__codelineno-35-5" href="#__codelineno-35-5"></a><span class="c1"># Add more articles</span>
-<a id="__codelineno-35-6" name="__codelineno-35-6" href="#__codelineno-35-6"></a>/add<span class="w"> </span>--jsonl<span class="w"> </span>more_articles.jsonl
-<a id="__codelineno-35-7" name="__codelineno-35-7" href="#__codelineno-35-7"></a>
-<a id="__codelineno-35-8" name="__codelineno-35-8" href="#__codelineno-35-8"></a><span class="c1"># Query</span>
-<a id="__codelineno-35-9" name="__codelineno-35-9" href="#__codelineno-35-9"></a>/predict<span class="w"> </span>The<span class="w"> </span>capital<span class="w"> </span>of<span class="w"> </span>France
+<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Create a JSONL dataset</span>
+<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>/dataset<span class="w"> </span>wiki
+<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>wikipedia_articles.jsonl
+<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a>
+<a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="c1"># Add more articles</span>
+<a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a>/add<span class="w"> </span>--jsonl<span class="w"> </span>more_articles.jsonl
+<a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a>
+<a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a><span class="c1"># Query</span>
+<a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a>/predict<span class="w"> </span>The<span class="w"> </span>capital<span class="w"> </span>of<span class="w"> </span>France
 </code></pre></div>
 <h3 id="using-bash-commands">Using Bash Commands<a class="headerlink" href="#using-bash-commands" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-36-1" name="__codelineno-36-1" href="#__codelineno-36-1"></a><span class="c1"># Check data files before loading</span>
-<a id="__codelineno-36-2" name="__codelineno-36-2" href="#__codelineno-36-2"></a>!ls<span class="w"> </span>-lh<span class="w"> </span>data/
-<a id="__codelineno-36-3" name="__codelineno-36-3" href="#__codelineno-36-3"></a>!wc<span class="w"> </span>-l<span class="w"> </span>data/corpus.txt
-<a id="__codelineno-36-4" name="__codelineno-36-4" href="#__codelineno-36-4"></a>
-<a id="__codelineno-36-5" name="__codelineno-36-5" href="#__codelineno-36-5"></a><span class="c1"># Preview JSONL structure</span>
-<a id="__codelineno-36-6" name="__codelineno-36-6" href="#__codelineno-36-6"></a>!head<span class="w"> </span>-3<span class="w"> </span>data/documents.jsonl
-<a id="__codelineno-36-7" name="__codelineno-36-7" href="#__codelineno-36-7"></a>
-<a id="__codelineno-36-8" name="__codelineno-36-8" href="#__codelineno-36-8"></a><span class="c1"># Load the data</span>
-<a id="__codelineno-36-9" name="__codelineno-36-9" href="#__codelineno-36-9"></a>/dataset<span class="w"> </span>docs
-<a id="__codelineno-36-10" name="__codelineno-36-10" href="#__codelineno-36-10"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>data/documents.jsonl
-<a id="__codelineno-36-11" name="__codelineno-36-11" href="#__codelineno-36-11"></a>
-<a id="__codelineno-36-12" name="__codelineno-36-12" href="#__codelineno-36-12"></a><span class="c1"># Check system resources</span>
-<a id="__codelineno-36-13" name="__codelineno-36-13" href="#__codelineno-36-13"></a>!free<span class="w"> </span>-h
-<a id="__codelineno-36-14" name="__codelineno-36-14" href="#__codelineno-36-14"></a>!df<span class="w"> </span>-h
-<a id="__codelineno-36-15" name="__codelineno-36-15" href="#__codelineno-36-15"></a>
-<a id="__codelineno-36-16" name="__codelineno-36-16" href="#__codelineno-36-16"></a><span class="c1"># Quick text processing</span>
-<a id="__codelineno-36-17" name="__codelineno-36-17" href="#__codelineno-36-17"></a>!grep<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;keyword&quot;</span><span class="w"> </span>data/corpus.txt
+<div class="highlight"><pre><span></span><code><a id="__codelineno-39-1" name="__codelineno-39-1" href="#__codelineno-39-1"></a><span class="c1"># Check data files before loading</span>
+<a id="__codelineno-39-2" name="__codelineno-39-2" href="#__codelineno-39-2"></a>!ls<span class="w"> </span>-lh<span class="w"> </span>data/
+<a id="__codelineno-39-3" name="__codelineno-39-3" href="#__codelineno-39-3"></a>!wc<span class="w"> </span>-l<span class="w"> </span>data/corpus.txt
+<a id="__codelineno-39-4" name="__codelineno-39-4" href="#__codelineno-39-4"></a>
+<a id="__codelineno-39-5" name="__codelineno-39-5" href="#__codelineno-39-5"></a><span class="c1"># Preview JSONL structure</span>
+<a id="__codelineno-39-6" name="__codelineno-39-6" href="#__codelineno-39-6"></a>!head<span class="w"> </span>-3<span class="w"> </span>data/documents.jsonl
+<a id="__codelineno-39-7" name="__codelineno-39-7" href="#__codelineno-39-7"></a>
+<a id="__codelineno-39-8" name="__codelineno-39-8" href="#__codelineno-39-8"></a><span class="c1"># Load the data</span>
+<a id="__codelineno-39-9" name="__codelineno-39-9" href="#__codelineno-39-9"></a>/dataset<span class="w"> </span>docs
+<a id="__codelineno-39-10" name="__codelineno-39-10" href="#__codelineno-39-10"></a>/load<span class="w"> </span>--jsonl<span class="w"> </span>data/documents.jsonl
+<a id="__codelineno-39-11" name="__codelineno-39-11" href="#__codelineno-39-11"></a>
+<a id="__codelineno-39-12" name="__codelineno-39-12" href="#__codelineno-39-12"></a><span class="c1"># Check system resources</span>
+<a id="__codelineno-39-13" name="__codelineno-39-13" href="#__codelineno-39-13"></a>!free<span class="w"> </span>-h
+<a id="__codelineno-39-14" name="__codelineno-39-14" href="#__codelineno-39-14"></a>!df<span class="w"> </span>-h
+<a id="__codelineno-39-15" name="__codelineno-39-15" href="#__codelineno-39-15"></a>
+<a id="__codelineno-39-16" name="__codelineno-39-16" href="#__codelineno-39-16"></a><span class="c1"># Quick text processing</span>
+<a id="__codelineno-39-17" name="__codelineno-39-17" href="#__codelineno-39-17"></a>!grep<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;keyword&quot;</span><span class="w"> </span>data/corpus.txt
 </code></pre></div>
 <h2 id="tips">Tips<a class="headerlink" href="#tips" title="Permanent link">&para;</a></h2>
 <ol>
@@ -2379,33 +2495,33 @@
 </ol>
 <h2 id="advanced-usage">Advanced Usage<a class="headerlink" href="#advanced-usage" title="Permanent link">&para;</a></h2>
 <h3 id="temperature-effects">Temperature Effects<a class="headerlink" href="#temperature-effects" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-37-1" name="__codelineno-37-1" href="#__codelineno-37-1"></a><span class="c1"># Deterministic (greedy)</span>
-<a id="__codelineno-37-2" name="__codelineno-37-2" href="#__codelineno-37-2"></a>/temperature<span class="w"> </span><span class="m">0</span>.1
-<a id="__codelineno-37-3" name="__codelineno-37-3" href="#__codelineno-37-3"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
-<a id="__codelineno-37-4" name="__codelineno-37-4" href="#__codelineno-37-4"></a><span class="c1"># Output: &quot; sat on the mat. the cat sat on the mat.&quot;</span>
-<a id="__codelineno-37-5" name="__codelineno-37-5" href="#__codelineno-37-5"></a>
-<a id="__codelineno-37-6" name="__codelineno-37-6" href="#__codelineno-37-6"></a><span class="c1"># Balanced</span>
-<a id="__codelineno-37-7" name="__codelineno-37-7" href="#__codelineno-37-7"></a>/temperature<span class="w"> </span><span class="m">1</span>.0
-<a id="__codelineno-37-8" name="__codelineno-37-8" href="#__codelineno-37-8"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
-<a id="__codelineno-37-9" name="__codelineno-37-9" href="#__codelineno-37-9"></a><span class="c1"># Output: &quot; ran on the log. the dog sat near&quot;</span>
-<a id="__codelineno-37-10" name="__codelineno-37-10" href="#__codelineno-37-10"></a>
-<a id="__codelineno-37-11" name="__codelineno-37-11" href="#__codelineno-37-11"></a><span class="c1"># Random/Creative</span>
-<a id="__codelineno-37-12" name="__codelineno-37-12" href="#__codelineno-37-12"></a>/temperature<span class="w"> </span><span class="m">2</span>.0
-<a id="__codelineno-37-13" name="__codelineno-37-13" href="#__codelineno-37-13"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
-<a id="__codelineno-37-14" name="__codelineno-37-14" href="#__codelineno-37-14"></a><span class="c1"># Output: &quot; wobbled through mysterious gardens while&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-40-1" name="__codelineno-40-1" href="#__codelineno-40-1"></a><span class="c1"># Deterministic (greedy)</span>
+<a id="__codelineno-40-2" name="__codelineno-40-2" href="#__codelineno-40-2"></a>/temperature<span class="w"> </span><span class="m">0</span>.1
+<a id="__codelineno-40-3" name="__codelineno-40-3" href="#__codelineno-40-3"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
+<a id="__codelineno-40-4" name="__codelineno-40-4" href="#__codelineno-40-4"></a><span class="c1"># Output: &quot; sat on the mat. the cat sat on the mat.&quot;</span>
+<a id="__codelineno-40-5" name="__codelineno-40-5" href="#__codelineno-40-5"></a>
+<a id="__codelineno-40-6" name="__codelineno-40-6" href="#__codelineno-40-6"></a><span class="c1"># Balanced</span>
+<a id="__codelineno-40-7" name="__codelineno-40-7" href="#__codelineno-40-7"></a>/temperature<span class="w"> </span><span class="m">1</span>.0
+<a id="__codelineno-40-8" name="__codelineno-40-8" href="#__codelineno-40-8"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
+<a id="__codelineno-40-9" name="__codelineno-40-9" href="#__codelineno-40-9"></a><span class="c1"># Output: &quot; ran on the log. the dog sat near&quot;</span>
+<a id="__codelineno-40-10" name="__codelineno-40-10" href="#__codelineno-40-10"></a>
+<a id="__codelineno-40-11" name="__codelineno-40-11" href="#__codelineno-40-11"></a><span class="c1"># Random/Creative</span>
+<a id="__codelineno-40-12" name="__codelineno-40-12" href="#__codelineno-40-12"></a>/temperature<span class="w"> </span><span class="m">2</span>.0
+<a id="__codelineno-40-13" name="__codelineno-40-13" href="#__codelineno-40-13"></a>/complete<span class="w"> </span>the<span class="w"> </span>cat
+<a id="__codelineno-40-14" name="__codelineno-40-14" href="#__codelineno-40-14"></a><span class="c1"># Output: &quot; wobbled through mysterious gardens while&quot;</span>
 </code></pre></div>
 <h3 id="hierarchical-prediction">Hierarchical Prediction<a class="headerlink" href="#hierarchical-prediction" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-38-1" name="__codelineno-38-1" href="#__codelineno-38-1"></a><span class="c1"># Linear: w(k) = k</span>
-<a id="__codelineno-38-2" name="__codelineno-38-2" href="#__codelineno-38-2"></a>/weight<span class="w"> </span>linear
-<a id="__codelineno-38-3" name="__codelineno-38-3" href="#__codelineno-38-3"></a>/predict<span class="w"> </span>the
-<a id="__codelineno-38-4" name="__codelineno-38-4" href="#__codelineno-38-4"></a>
-<a id="__codelineno-38-5" name="__codelineno-38-5" href="#__codelineno-38-5"></a><span class="c1"># Quadratic: w(k) = k²  (strongly favors longer matches)</span>
-<a id="__codelineno-38-6" name="__codelineno-38-6" href="#__codelineno-38-6"></a>/weight<span class="w"> </span>quadratic
-<a id="__codelineno-38-7" name="__codelineno-38-7" href="#__codelineno-38-7"></a>/predict<span class="w"> </span>the
-<a id="__codelineno-38-8" name="__codelineno-38-8" href="#__codelineno-38-8"></a>
-<a id="__codelineno-38-9" name="__codelineno-38-9" href="#__codelineno-38-9"></a><span class="c1"># Exponential: w(k) = 2^k  (very strongly favors longest)</span>
-<a id="__codelineno-38-10" name="__codelineno-38-10" href="#__codelineno-38-10"></a>/weight<span class="w"> </span>exponential
-<a id="__codelineno-38-11" name="__codelineno-38-11" href="#__codelineno-38-11"></a>/predict<span class="w"> </span>the
+<div class="highlight"><pre><span></span><code><a id="__codelineno-41-1" name="__codelineno-41-1" href="#__codelineno-41-1"></a><span class="c1"># Linear: w(k) = k</span>
+<a id="__codelineno-41-2" name="__codelineno-41-2" href="#__codelineno-41-2"></a>/weight<span class="w"> </span>linear
+<a id="__codelineno-41-3" name="__codelineno-41-3" href="#__codelineno-41-3"></a>/predict<span class="w"> </span>the
+<a id="__codelineno-41-4" name="__codelineno-41-4" href="#__codelineno-41-4"></a>
+<a id="__codelineno-41-5" name="__codelineno-41-5" href="#__codelineno-41-5"></a><span class="c1"># Quadratic: w(k) = k²  (strongly favors longer matches)</span>
+<a id="__codelineno-41-6" name="__codelineno-41-6" href="#__codelineno-41-6"></a>/weight<span class="w"> </span>quadratic
+<a id="__codelineno-41-7" name="__codelineno-41-7" href="#__codelineno-41-7"></a>/predict<span class="w"> </span>the
+<a id="__codelineno-41-8" name="__codelineno-41-8" href="#__codelineno-41-8"></a>
+<a id="__codelineno-41-9" name="__codelineno-41-9" href="#__codelineno-41-9"></a><span class="c1"># Exponential: w(k) = 2^k  (very strongly favors longest)</span>
+<a id="__codelineno-41-10" name="__codelineno-41-10" href="#__codelineno-41-10"></a>/weight<span class="w"> </span>exponential
+<a id="__codelineno-41-11" name="__codelineno-41-11" href="#__codelineno-41-11"></a>/predict<span class="w"> </span>the
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <p><strong>Problem</strong>: "No dataset selected"
