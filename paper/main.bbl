@@ -1,0 +1,110 @@
+\begin{thebibliography}{16}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{\texttt{#1}}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi: #1}\else
+  \providecommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}\fi
+
+\bibitem[Begleiter et~al.(2004)Begleiter, El-Yaniv, and
+  Yona]{begleiter2004prediction}
+Ron Begleiter, Ran El-Yaniv, and Golan Yona.
+\newblock On prediction using variable order {M}arkov models.
+\newblock \emph{Journal of Artificial Intelligence Research}, 22:\penalty0
+  385--421, 2004.
+
+\bibitem[Brants et~al.(2007)Brants, Popat, Xu, Och, and Dean]{brants2007large}
+Thorsten Brants, Ashok~C Popat, Peng Xu, Franz~J Och, and Jeffrey Dean.
+\newblock Large language models in machine translation.
+\newblock In \emph{Proceedings of the 2007 Joint Conference on Empirical
+  Methods in Natural Language Processing and Computational Natural Language
+  Learning}, pages 858--867, 2007.
+
+\bibitem[Chen and Goodman(1996)]{chen1996empirical}
+Stanley~F Chen and Joshua Goodman.
+\newblock An empirical study of smoothing techniques for language modeling.
+\newblock \emph{Proceedings of the 34th Annual Meeting of the Association for
+  Computational Linguistics}, pages 310--318, 1996.
+
+\bibitem[Ferragina and Manzini(2000)]{ferragina2000}
+Paolo Ferragina and Giovanni Manzini.
+\newblock Opportunistic data structures with applications.
+\newblock \emph{Proceedings of the 41st Annual Symposium on Foundations of
+  Computer Science}, pages 390--398, 2000.
+
+\bibitem[Ferragina and Manzini(2005)]{ferragina2005}
+Paolo Ferragina and Giovanni Manzini.
+\newblock Indexing compressed text.
+\newblock \emph{Journal of the ACM}, 52\penalty0 (4):\penalty0 552--581, 2005.
+
+\bibitem[Izacard et~al.(2022)Izacard, Lewis, Lomeli, Hosseini, Petroni, Schick,
+  Dwivedi-Yu, Joulin, Riedel, and Grave]{izacard2021atlas}
+Gautier Izacard, Patrick Lewis, Maria Lomeli, Lucas Hosseini, Fabio Petroni,
+  Timo Schick, Jane Dwivedi-Yu, Armand Joulin, Sebastian Riedel, and Edouard
+  Grave.
+\newblock Atlas: Few-shot learning with retrieval augmented language models.
+\newblock \emph{arXiv preprint arXiv:2208.03299}, 2022.
+
+\bibitem[Jelinek(1991)]{jelinek1991}
+Frederick Jelinek.
+\newblock Up from trigrams! the struggle for improved language models.
+\newblock \emph{Proceedings of Eurospeech}, pages 1037--1040, 1991.
+
+\bibitem[K{\"a}rkk{\"a}inen and Sanders(2003)]{karkkainen2003dc3}
+Juha K{\"a}rkk{\"a}inen and Peter Sanders.
+\newblock Simple linear work suffix array construction.
+\newblock \emph{Proceedings of the 30th International Colloquium on Automata,
+  Languages and Programming}, pages 943--955, 2003.
+
+\bibitem[Khandelwal et~al.(2020)Khandelwal, Levy, Jurafsky, Zettlemoyer, and
+  Lewis]{khandelwal2020knnlm}
+Urvashi Khandelwal, Omer Levy, Dan Jurafsky, Luke Zettlemoyer, and Mike Lewis.
+\newblock Generalization through memorization: Nearest neighbor language
+  models.
+\newblock In \emph{International Conference on Learning Representations}, 2020.
+
+\bibitem[Lewis et~al.(2020)Lewis, Perez, Piktus, Petroni, Karpukhin, Goyal,
+  K{\"u}ttler, Lewis, Yih, Rockt{\"a}schel, et~al.]{lewis2020rag}
+Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir
+  Karpukhin, Naman Goyal, Heinrich K{\"u}ttler, Mike Lewis, Wen-tau Yih, Tim
+  Rockt{\"a}schel, et~al.
+\newblock Retrieval-augmented generation for knowledge-intensive {NLP} tasks.
+\newblock In \emph{Advances in Neural Information Processing Systems},
+  volume~33, pages 9459--9474, 2020.
+
+\bibitem[Liu et~al.(2024)Liu, Min, Zettlemoyer, Choi, and
+  Hajishirzi]{liu2024infini}
+Jiacheng Liu, Sewon Min, Luke Zettlemoyer, Yejin Choi, and Hannaneh Hajishirzi.
+\newblock Infini-gram: Scaling unbounded n-gram language models to a trillion
+  tokens.
+\newblock \emph{arXiv preprint arXiv:2401.17377}, 2024.
+
+\bibitem[Manber and Myers(1993)]{manber1993suffix}
+Udi Manber and Gene Myers.
+\newblock Suffix arrays: A new method for on-line string searches.
+\newblock \emph{SIAM Journal on Computing}, 22\penalty0 (5):\penalty0 935--948,
+  1993.
+
+\bibitem[McCreight(1976)]{mccreight1976}
+Edward~M McCreight.
+\newblock A space-economical suffix tree construction algorithm.
+\newblock \emph{Journal of the ACM}, 23\penalty0 (2):\penalty0 262--272, 1976.
+
+\bibitem[Nong et~al.(2009)Nong, Zhang, and Chan]{nong2009sais}
+Ge~Nong, Sen Zhang, and Wai~Hong Chan.
+\newblock Two efficient algorithms for linear time suffix array construction.
+\newblock In \emph{IEEE International Symposium on Information Theory}, pages
+  449--453, 2009.
+
+\bibitem[Rissanen(1983)]{rissanen1983}
+Jorma Rissanen.
+\newblock A universal data compression system.
+\newblock \emph{IEEE Transactions on Information Theory}, 29\penalty0
+  (5):\penalty0 656--664, 1983.
+
+\bibitem[Weiner(1973)]{weiner1973}
+Peter Weiner.
+\newblock Linear pattern matching algorithms.
+\newblock \emph{Proceedings of the 14th Annual Symposium on Switching and
+  Automata Theory}, pages 1--11, 1973.
+
+\end{thebibliography}

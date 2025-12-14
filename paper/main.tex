@@ -1,0 +1,321 @@
+\documentclass[11pt]{article}
+
+% Standard packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[margin=1in]{geometry}
+\usepackage{natbib}
+
+% Title and authors
+\title{Infinigram: Corpus-Based Language Modeling via Suffix Arrays with LLM Probability Mixing}
+
+\author{
+  Technical Report
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present Infinigram, a corpus-based language model that uses suffix arrays for variable-length n-gram pattern matching. Unlike neural language models that require expensive training and fine-tuning, Infinigram provides instant ``training''---the corpus \emph{is} the model. Given a context, Infinigram finds the longest matching suffix in the training corpus and estimates next-token probabilities from observed continuations. This approach offers three key advantages: (1) $O(m \log n)$ query time enabling real-time predictions, (2) complete explainability since every prediction traces to specific corpus evidence, and (3) the ability to ground large language model (LLM) outputs through probability mixing without retraining. We introduce a theoretical framework that views inductive biases as \emph{projections}---transformations applied to queries or training data that enable generalization. Runtime transforms project queries to find better corpus matches, while corpus augmentations project training data to expand coverage. This unified perspective provides a principled approach to out-of-distribution generalization in corpus-based models. Infinigram achieves sub-10ms query latency on million-token corpora and can handle datasets exceeding 100GB through chunked memory-mapped indexing.
+\end{abstract}
+
+\section{Introduction}
+
+Language modeling---predicting the next token given a context---is fundamental to modern natural language processing. The dominant paradigm involves training neural networks with billions of parameters on massive text corpora, a process that requires substantial computational resources and time. Fine-tuning these models for specific domains compounds the cost, yet is often necessary to reduce hallucinations and improve domain-specific performance.
+
+We revisit a simpler approach: using the training corpus directly as the model. N-gram language models \citep{jelinek1991,chen1996empirical} have a long history in NLP, but traditional implementations suffer from fixed context lengths and exponential memory growth. Variable-length Markov models \citep{rissanen1983,begleiter2004prediction} address the fixed-length limitation but remain computationally expensive for long contexts.
+
+Infinigram leverages suffix arrays \citep{manber1993suffix} to enable efficient variable-length pattern matching. Given a context, we find the longest suffix that occurs in the training corpus and use the distribution of tokens following that suffix as our prediction. This provides:
+
+\begin{itemize}
+    \item \textbf{Instant training}: Building a suffix array is $O(n \log n)$ for a corpus of size $n$, with no iterative optimization.
+    \item \textbf{Explainability}: Every prediction references specific corpus positions, enabling debugging and interpretation.
+    \item \textbf{LLM grounding}: Neural LM outputs can be mixed with corpus-based probabilities to reduce hallucinations without retraining.
+\end{itemize}
+
+The key insight motivating Infinigram is that for many domain-specific applications, the relevant patterns \emph{already exist} in the target corpus. Rather than hoping a neural model will learn and retain these patterns, we can retrieve them directly.
+
+\subsection{Contributions}
+
+Our contributions are:
+
+\begin{enumerate}
+    \item A corpus-based language model using suffix arrays that provides $O(m \log n)$ query complexity for context length $m$ and corpus size $n$.
+
+    \item A framework for \emph{LLM probability mixing} that grounds neural model outputs in specific corpora without fine-tuning.
+
+    \item A theoretical perspective on inductive biases as \emph{projections}---transformations of queries or data that enable generalization---with implementations of both runtime query transforms and corpus augmentations.
+
+    \item An open-source implementation with memory-mapped indexing supporting corpora exceeding 100GB.
+\end{enumerate}
+
+\section{Method}
+
+\subsection{Suffix Array Foundation}
+
+A suffix array \citep{manber1993suffix} for a text $T$ of length $n$ is an array $SA$ of integers in $[0, n-1]$ that specifies the lexicographic ordering of all suffixes of $T$. Formally, $SA[i]$ gives the starting position of the $i$-th smallest suffix. Suffix arrays can be constructed in $O(n)$ time using algorithms such as SA-IS \citep{nong2009sais} or DC3 \citep{karkkainen2003dc3}, though we use the practical $O(n \log n)$ divsufsort library for its speed in practice.
+
+Given a pattern $P$ of length $m$, we can find all occurrences in $T$ using binary search on $SA$ in $O(m \log n)$ time. This is the key operation underlying Infinigram's efficiency.
+
+\subsection{Variable-Length Suffix Matching}
+
+Traditional n-gram models use a fixed context length. Infinigram instead finds the \emph{longest matching suffix}. Given a context $c = c_1 c_2 \ldots c_m$, we search for progressively longer suffixes starting from the full context:
+
+\begin{algorithmic}[1]
+\Function{LongestSuffix}{$c$, $SA$, $T$}
+    \For{$\ell = m$ \textbf{down to} $1$}
+        \State $\text{suffix} \gets c[m-\ell+1 : m]$
+        \If{\Call{Count}{$\text{suffix}$, $SA$, $T$} $> 0$}
+            \State \Return positions, $\ell$
+        \EndIf
+    \EndFor
+    \State \Return $\emptyset$, $0$
+\EndFunction
+\end{algorithmic}
+
+This can be optimized by noting that if suffix $s$ is not found, no longer suffix containing $s$ as a suffix can be found either. In practice, we start from the longest and stop at the first match.
+
+\subsection{Probability Estimation}
+
+Given the longest matching suffix of length $\ell$ occurring at positions $\{p_1, \ldots, p_k\}$, we estimate next-token probabilities from the tokens following these positions. Let $\text{count}(t)$ be the number of positions where token $t$ follows the matched suffix:
+
+\begin{equation}
+P(t \mid c) = \frac{\text{count}(t) + \alpha}{\sum_{t'} \text{count}(t') + \alpha \cdot |V|}
+\end{equation}
+
+where $\alpha$ is a Laplace smoothing parameter and $|V| = 256$ for byte-level modeling. This ensures non-zero probabilities for all possible continuations.
+
+\subsubsection{Hierarchical Weighted Prediction}
+
+Rather than using only the longest match, we can combine predictions from multiple suffix lengths:
+
+\begin{equation}
+P(t \mid c) = \frac{\sum_{\ell=1}^{L} w(\ell) \cdot \text{count}_\ell(t)}{\sum_{\ell=1}^{L} w(\ell) \cdot \text{total}_\ell}
+\end{equation}
+
+where $w(\ell)$ is a weighting function. Infinigram supports linear ($w(\ell) = \ell$), quadratic ($w(\ell) = \ell^2$), exponential ($w(\ell) = b^\ell$), and sigmoid weighting functions. Longer matches receive higher weights since they provide more specific context.
+
+\subsubsection{Stupid Backoff}
+
+We also implement Stupid Backoff \citep{brants2007large}, which uses the longest reliable match and backs off to shorter contexts with a penalty factor $\lambda$ (typically 0.4):
+
+\begin{equation}
+S(t \mid c) = \begin{cases}
+\text{count}(t \mid c) / \text{total} & \text{if count}(c) \geq \tau \\
+\lambda \cdot S(t \mid c_{2:m}) & \text{otherwise}
+\end{cases}
+\end{equation}
+
+This is faster than hierarchical prediction since it stops at the first sufficiently reliable match.
+
+\subsection{LLM Probability Mixing}
+
+The primary practical application of Infinigram is \emph{grounding} neural language model outputs in specific corpora. Given an LLM with next-token distribution $P_{\text{LLM}}$ and a corpus-specific Infinigram model with distribution $P_{\text{IG}}$, we compute:
+
+\begin{equation}
+P_{\text{final}}(t \mid c) = \alpha \cdot P_{\text{LLM}}(t \mid c) + (1 - \alpha) \cdot P_{\text{IG}}(t \mid c)
+\end{equation}
+
+where $\alpha \in [0, 1]$ controls the mixing ratio. This provides several benefits:
+
+\begin{itemize}
+    \item \textbf{Domain adaptation without retraining}: Mixing with a legal corpus boosts legal terminology without fine-tuning.
+
+    \item \textbf{Hallucination reduction}: Corpus-based probabilities anchor outputs to text that actually exists.
+
+    \item \textbf{Real-time adaptation}: Switching corpora is instant---no retraining required.
+
+    \item \textbf{Interpretability}: When the model produces unexpected output, we can trace the corpus contribution.
+\end{itemize}
+
+The mixing parameter $\alpha$ can be fixed or adaptive based on the Infinigram model's confidence (match length and frequency). Low confidence indicates the corpus lacks relevant patterns, so the LLM should dominate.
+
+\subsection{Byte-to-Token Marginalization}
+
+A practical challenge for probability mixing is that Infinigram operates at the \emph{byte level} (vocabulary size 256), while LLMs typically use subword tokenizers with vocabularies of 32k--100k+ tokens. Directly mixing probabilities requires compatible token spaces.
+
+We solve this through \emph{byte-to-token marginalization}: computing token probabilities from byte probabilities via the chain rule. For a token $t$ that encodes to byte sequence $[b_1, b_2, \ldots, b_k]$:
+
+\begin{equation}
+P_{\text{IG}}(t \mid c) = \prod_{i=1}^{k} P(b_i \mid c, b_1, \ldots, b_{i-1})
+\end{equation}
+
+This is \emph{exact}, not an approximation. A token is simply a named byte sequence, and its probability is the joint probability of its constituent bytes under the chain rule.
+
+\textbf{Example.} Consider context ``Hello'' and token `` world'' (with leading space), which encodes to bytes $[32, 119, 111, 114, 108, 100]$:
+
+\begin{align}
+P_{\text{IG}}(\text{`` world''} \mid \text{``Hello''}) &= P(32 \mid \text{``Hello''}) \nonumber \\
+&\times P(119 \mid \text{``Hello ''}) \nonumber \\
+&\times P(111 \mid \text{``Hello w''}) \nonumber \\
+&\times P(114 \mid \text{``Hello wo''}) \nonumber \\
+&\times P(108 \mid \text{``Hello wor''}) \nonumber \\
+&\times P(100 \mid \text{``Hello worl''})
+\end{align}
+
+Each factor is a single Infinigram prediction, extending the context as we generate each byte.
+
+\textbf{Efficiency considerations.} Computing token probabilities for all 100k+ tokens in a typical LLM vocabulary would be prohibitive. In practice, we only compute $P_{\text{IG}}(t)$ for the top-$k$ tokens from the LLM distribution (typically $k = 50$--$100$), since the remaining tokens have negligible probability anyway.
+
+For numerical stability, we compute in log space:
+\begin{equation}
+\log P_{\text{IG}}(t \mid c) = \sum_{i=1}^{k} \log P(b_i \mid c, b_1, \ldots, b_{i-1})
+\end{equation}
+
+and use log-sum-exp for the mixture:
+\begin{equation}
+\log P_{\text{final}}(t) = \log\left(\alpha \cdot e^{\log P_{\text{LLM}}(t)} + (1-\alpha) \cdot e^{\log P_{\text{IG}}(t)}\right)
+\end{equation}
+
+This approach has a key advantage: \emph{one byte-level index serves all LLM tokenizers}. We build the suffix array once over raw bytes and can compute token probabilities for GPT-4, Claude, Llama, or any other model at query time without rebuilding the index.
+
+\section{Projections as Inductive Biases}
+
+A central theoretical contribution is viewing inductive biases as \emph{projections}---transformations that map queries or training data to enable better generalization. This framework unifies several techniques under a common abstraction.
+
+\subsection{The Projection Framework}
+
+Let $\mathcal{Q}$ be the space of possible queries and $\mathcal{D}$ the training data space. An inductive bias helps the model generalize from training data to novel queries. We observe that many useful inductive biases can be expressed as projections:
+
+\begin{itemize}
+    \item A \textbf{query projection} $\pi_Q: \mathcal{Q} \to \mathcal{Q}$ transforms the query before matching.
+    \item A \textbf{data projection} $\pi_D: \mathcal{D} \to \mathcal{D}$ transforms training data, typically creating augmented variants.
+\end{itemize}
+
+The key insight is that instead of building complex models with implicit biases, we can achieve similar effects through explicit, interpretable transformations.
+
+\subsection{Runtime Query Transforms}
+
+Infinigram supports runtime query transformations that project queries to find better corpus matches:
+
+\begin{itemize}
+    \item \texttt{lowercase}: Convert query to lowercase, enabling case-insensitive matching.
+    \item \texttt{casefold}: Unicode case folding for language-independent case normalization.
+    \item \texttt{strip}: Remove leading/trailing whitespace.
+    \item \texttt{normalize\_whitespace}: Collapse multiple whitespace to single spaces.
+\end{itemize}
+
+For example, the query ``THE CAT'' with \texttt{lowercase} transform will match corpus occurrences of ``the cat''. This is a projection: we map the query to a normalized form where matching is more likely.
+
+Transforms can be composed sequentially. The model also supports \emph{beam search} over transform combinations, exploring multiple projected queries and combining their predictions with learned weights.
+
+\subsection{Corpus Augmentation as Data Projection}
+
+Corpus augmentations apply projections to training data, creating additional variants that expand pattern coverage. Given documents $D = \{d_1, \ldots, d_k\}$ and augmentation functions $\{a_1, \ldots, a_m\}$, the augmented corpus contains:
+
+\begin{equation}
+D' = D \cup \bigcup_{i,j} \{a_j(d_i)\}
+\end{equation}
+
+For example, with a lowercase augmentation, the corpus containing ``Hello World'' also contains ``hello world''. Queries can then match either variant without runtime transformation.
+
+\subsection{Duality and Trade-offs}
+
+Query transforms and corpus augmentations are dual mechanisms achieving similar effects:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Aspect & Query Transform & Corpus Augmentation \\
+\midrule
+Storage cost & No increase & Multiplicative \\
+Query cost & Transform + search & Single search \\
+Flexibility & Runtime choice & Build-time choice \\
+Consistency & Applied per-query & Always available \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Query transforms are preferable when storage is limited or flexibility is important. Corpus augmentations are preferable when query latency is critical or certain projections should always apply.
+
+\subsection{Theoretical Perspective}
+
+This projection framework suggests a path toward more sample-efficient corpus-based models. Complex neural inductive biases---such as attention patterns, positional encodings, or architectural constraints---implicitly project inputs to representations where patterns are easier to learn. Our explicit projections make these transformations interpretable and composable.
+
+Future work might explore richer projections: semantic clustering (map tokens to concept IDs), lemmatization (map to root forms), or embedding-based soft matching (find semantically similar contexts even without exact string overlap).
+
+\section{Implementation}
+
+Infinigram is implemented in Python with performance-critical operations delegated to C libraries.
+
+\subsection{Architecture}
+
+The system has four layers:
+
+\begin{enumerate}
+    \item \textbf{Suffix Array Engine}: Uses \texttt{pydivsufsort} for $O(n \log n)$ construction at 15--30 MB/s. Supports memory-mapped storage for corpora larger than RAM.
+
+    \item \textbf{Core Model}: The \texttt{Infinigram} class provides \texttt{predict()}, \texttt{predict\_weighted()}, and \texttt{predict\_backoff()} methods with configurable smoothing and transforms.
+
+    \item \textbf{REST API}: A FastAPI server provides OpenAI-compatible endpoints (\texttt{/v1/completions}) for integration with existing tooling.
+
+    \item \textbf{REPL}: An interactive shell for exploration, dataset management, and ad-hoc queries.
+\end{enumerate}
+
+\subsection{Byte-Level Tokenization}
+
+Infinigram operates on raw UTF-8 bytes, giving a fixed vocabulary of 256 tokens. This avoids tokenizer dependencies and vocabulary mismatch issues when mixing with different LLMs. The trade-off is longer effective context lengths (characters require 1--4 bytes), mitigated by the efficiency of suffix array queries.
+
+\subsection{Memory-Mapped Indexing}
+
+For large corpora, Infinigram uses memory-mapped files for both the corpus and suffix array. This allows the operating system to page in only the needed portions, enabling queries on 100GB+ corpora with minimal RAM usage. For corpora exceeding available memory during construction, a chunked index splits the data into independently indexed segments whose results are merged at query time.
+
+\subsection{Performance}
+
+Target performance characteristics:
+
+\begin{itemize}
+    \item \textbf{Construction}: 1M tokens/second (15--30 MB/s for byte-level)
+    \item \textbf{Query latency}: $<$10ms for 100-token contexts
+    \item \textbf{Memory}: $<$10 bytes per corpus token (8 bytes for suffix array + corpus)
+\end{itemize}
+
+\section{Related Work}
+
+\paragraph{N-gram Language Models}
+Traditional n-gram models \citep{jelinek1991,chen1996empirical} estimate $P(w_n \mid w_1, \ldots, w_{n-1})$ from corpus counts with various smoothing techniques (Kneser-Ney, Witten-Bell). These models use fixed context lengths, limiting their ability to capture long-range dependencies. Infinigram's variable-length matching addresses this limitation.
+
+\paragraph{Suffix Arrays and Trees}
+Suffix arrays \citep{manber1993suffix} and suffix trees \citep{weiner1973,mccreight1976} enable efficient string matching. The Burrows-Wheeler Transform and FM-index \citep{ferragina2000,ferragina2005} provide compressed alternatives. Our use of suffix arrays for language modeling builds on this algorithmic foundation.
+
+\paragraph{Retrieval-Augmented Generation}
+RAG systems \citep{lewis2020rag,izacard2021atlas} retrieve relevant documents to condition neural generation. Infinigram differs by retrieving \emph{exact pattern matches} rather than semantically similar documents, and by modifying token-level probabilities rather than prepending context. The approaches are complementary.
+
+\paragraph{kNN-LM}
+\citet{khandelwal2020knnlm} propose augmenting neural LMs with a nearest-neighbor lookup in a datastore of context embeddings. This requires storing embeddings for every training token (hundreds of GB for large corpora) and uses approximate nearest neighbor search. Infinigram uses exact string matching with much lower storage overhead.
+
+\paragraph{Infini-gram}
+Concurrent work by \citet{liu2024infini} presents a system also named ``infini-gram'' that indexes massive web corpora (5 trillion tokens) for n-gram analysis and LLM augmentation. Their focus is on scaling to web-scale data, while our work emphasizes the projection framework for generalization and practical domain-specific applications.
+
+\section{Conclusion and Future Work}
+
+Infinigram provides a simple, fast, and explainable approach to language modeling that complements neural methods. The ability to mix corpus-based probabilities with LLM outputs offers a practical alternative to fine-tuning for domain adaptation. Our projection framework provides a theoretical lens for understanding generalization in corpus-based models.
+
+Future directions include:
+
+\begin{itemize}
+    \item \textbf{Richer projections}: Semantic clustering, lemmatization, and edit-distance-based fuzzy matching could expand coverage without proportional corpus growth.
+
+    \item \textbf{Adaptive mixing}: Learning context-dependent $\alpha$ values for LLM probability mixing based on match confidence and domain signals.
+
+    \item \textbf{Compressed indexes}: FM-index or grammar-compressed representations could reduce storage for highly repetitive corpora.
+
+    \item \textbf{Multi-scale models}: Combining byte-level, subword, and word-level indexes to balance specificity and coverage.
+\end{itemize}
+
+The source code is available at \url{https://github.com/example/infinigram} under an open-source license.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

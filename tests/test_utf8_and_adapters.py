@@ -382,3 +382,305 @@ class TestIntegrationWithDocuments:
         # Augmented model should have this pattern
         pos_aug, len_aug = model_aug.longest_suffix(context_lower)
         assert len_aug > 0  # Should find "hello" from augmentation
+
+
+class MockTokenizer:
+    """Mock tokenizer for testing TokenProbabilityAdapter."""
+
+    def __init__(self, vocab: dict = None):
+        """
+        Initialize mock tokenizer.
+
+        Args:
+            vocab: Optional dict mapping token_id -> text
+        """
+        # Simple vocabulary: ASCII printable characters as single-char tokens
+        self._vocab = vocab or {i: chr(i) for i in range(32, 127)}
+        self._reverse = {v: k for k, v in self._vocab.items()}
+
+    def encode(self, text: str) -> list:
+        """Encode text to token IDs (character-level)."""
+        return [self._reverse.get(c, ord(c)) for c in text]
+
+    def decode(self, tokens: list) -> str:
+        """Decode token IDs to text."""
+        return ''.join(self._vocab.get(t, chr(t)) for t in tokens)
+
+    @property
+    def vocab_size(self) -> int:
+        """Return vocabulary size."""
+        return len(self._vocab)
+
+
+class TestTokenProbabilityAdapter:
+    """Tests for TokenProbabilityAdapter."""
+
+    def test_import(self):
+        """Test TokenProbabilityAdapter can be imported."""
+        from infinigram.adapters import TokenProbabilityAdapter
+        assert TokenProbabilityAdapter is not None
+
+    def test_init(self):
+        """Test adapter initialization."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"the cat sat on the mat")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        assert adapter.model is model
+        assert adapter.tokenizer is tokenizer
+
+    def test_token_probability_single_byte(self):
+        """Test probability for single-byte token."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        # Corpus where 'a' always follows 'c'
+        corpus = list(b"ca ca ca ca")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # Token 'a' (ASCII 97) should have high probability after 'c'
+        prob = adapter.token_probability("c", ord('a'))
+        assert prob > 0.5
+
+    def test_token_probability_multi_byte(self):
+        """Test probability for multi-byte token."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        # Create tokenizer with multi-char tokens
+        vocab = {
+            1: "the",
+            2: " cat",
+            3: " sat",
+        }
+        tokenizer = MockTokenizer(vocab)
+
+        corpus = list(b"the cat sat the cat sat the cat")
+        model = Infinigram(corpus)
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # After "the", " cat" (token 2) should have high probability
+        prob_cat = adapter.token_probability("the", 2)
+        assert prob_cat > 0.1
+
+    def test_token_log_probability(self):
+        """Test log probability computation."""
+        from infinigram.adapters import TokenProbabilityAdapter
+        import math
+
+        corpus = list(b"ab ab ab ab")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # Get both log and linear probability
+        log_p = adapter.token_log_probability("a", ord('b'))
+        p = adapter.token_probability("a", ord('b'))
+
+        # They should be consistent
+        assert abs(math.exp(log_p) - p) < 1e-6
+
+    def test_token_probabilities_batch(self):
+        """Test batch probability computation."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"ab ac ad ae")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # Get probabilities for multiple tokens
+        token_ids = [ord('b'), ord('c'), ord('d'), ord('e')]
+        probs = adapter.token_probabilities("a", token_ids)
+
+        assert len(probs) == 4
+        assert all(p >= 0 for p in probs.values())
+
+    def test_token_probabilities_normalized(self):
+        """Test normalized probability computation."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"ab ac ab ac")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        token_ids = [ord('b'), ord('c')]
+        probs = adapter.token_probabilities("a", token_ids, normalize=True)
+
+        # Normalized probabilities should sum to 1
+        total = sum(probs.values())
+        assert abs(total - 1.0) < 1e-6
+
+    def test_mix_probabilities(self):
+        """Test probability mixing with LLM."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"ab ab ab ab")  # Corpus strongly prefers 'b' after 'a'
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # LLM prefers 'c' after 'a'
+        llm_probs = {ord('b'): 0.2, ord('c'): 0.8}
+
+        # Mix with alpha=0.5
+        mixed = adapter.mix_probabilities("a", llm_probs, alpha=0.5)
+
+        # Both tokens should be present
+        assert ord('b') in mixed
+        assert ord('c') in mixed
+
+        # Probabilities should be normalized
+        total = sum(mixed.values())
+        assert abs(total - 1.0) < 1e-6
+
+    def test_mix_probabilities_alpha_extremes(self):
+        """Test mixing at alpha extremes."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"ab ab ab")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        llm_probs = {ord('b'): 0.3, ord('x'): 0.7}
+
+        # alpha=1.0 should give pure LLM
+        mixed_llm = adapter.mix_probabilities("a", llm_probs, alpha=1.0, normalize=False)
+        assert abs(mixed_llm[ord('b')] - 0.3) < 1e-6
+        assert abs(mixed_llm[ord('x')] - 0.7) < 1e-6
+
+        # alpha=0.0 should give pure corpus
+        mixed_corpus = adapter.mix_probabilities("a", llm_probs, alpha=0.0, normalize=False)
+        # 'b' should have corpus probability, 'x' should be very low
+        assert mixed_corpus[ord('b')] > mixed_corpus[ord('x')]
+
+    def test_mix_probabilities_invalid_alpha(self):
+        """Test that invalid alpha raises error."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"test")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        with pytest.raises(ValueError, match="alpha must be in"):
+            adapter.mix_probabilities("t", {ord('e'): 1.0}, alpha=1.5)
+
+        with pytest.raises(ValueError, match="alpha must be in"):
+            adapter.mix_probabilities("t", {ord('e'): 1.0}, alpha=-0.1)
+
+    def test_mix_log_probabilities(self):
+        """Test log-domain probability mixing."""
+        from infinigram.adapters import TokenProbabilityAdapter
+        import math
+
+        corpus = list(b"ab ab ab")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # LLM log probabilities
+        llm_log_probs = {ord('b'): math.log(0.3), ord('c'): math.log(0.7)}
+
+        # Mix in log domain
+        mixed_log = adapter.mix_log_probabilities("a", llm_log_probs, alpha=0.5)
+
+        # Should produce valid log probabilities
+        assert ord('b') in mixed_log
+        assert ord('c') in mixed_log
+        assert all(v <= 0 for v in mixed_log.values())  # Log probs are <= 0
+
+    def test_repr(self):
+        """Test string representation."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"test")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+        repr_str = repr(adapter)
+
+        assert "TokenProbabilityAdapter" in repr_str
+        assert "MockTokenizer" in repr_str
+
+    def test_context_types(self):
+        """Test that various context types work."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        corpus = list(b"ab ab ab")
+        model = Infinigram(corpus)
+        tokenizer = MockTokenizer()
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+        token_id = ord('b')
+
+        # String context
+        p1 = adapter.token_probability("a", token_id)
+
+        # Bytes context
+        p2 = adapter.token_probability(b"a", token_id)
+
+        # List context
+        p3 = adapter.token_probability([ord('a')], token_id)
+
+        # All should give same result
+        assert abs(p1 - p2) < 1e-6
+        assert abs(p2 - p3) < 1e-6
+
+    def test_chain_rule_correctness(self):
+        """Test that chain rule is applied correctly for multi-byte tokens."""
+        from infinigram.adapters import TokenProbabilityAdapter
+
+        # Use a corpus with clear patterns where bytes appear in top_k
+        corpus = list(b"ab ab ab ab ab ab ab ab")
+        model = Infinigram(corpus)
+
+        # Token 1 = "ab"
+        vocab = {1: "ab", 2: "cd"}
+        tokenizer = MockTokenizer(vocab)
+
+        adapter = TokenProbabilityAdapter(model, tokenizer)
+
+        # Test 1: Single byte token matches model.predict() directly
+        # After "a", get P("b") via adapter
+        p_b_via_adapter = adapter.token_probability("a", ord('b'))
+
+        # Get P("b"|"a") directly from model
+        p_b_direct = model.predict([ord('a')]).get(ord('b'), 0)
+
+        # Single byte token: adapter should match direct prediction
+        assert abs(p_b_via_adapter - p_b_direct) < 1e-6
+
+        # Test 2: Verify multi-byte tokens use chain rule
+        # P("ab" | "ab ") should be P('a'|"ab ") * P('b'|"ab a")
+        context = "ab "
+
+        p_ab_token = adapter.token_probability(context, 1)
+
+        # Manually compute via chain rule
+        ctx_bytes = list(context.encode('utf-8'))
+        p_a = model.predict(ctx_bytes).get(ord('a'), adapter.smoothing)
+
+        ctx_with_a = ctx_bytes + [ord('a')]
+        p_b_given_a = model.predict(ctx_with_a).get(ord('b'), adapter.smoothing)
+
+        expected = p_a * p_b_given_a
+
+        # Should match
+        assert abs(p_ab_token - expected) < 1e-6
